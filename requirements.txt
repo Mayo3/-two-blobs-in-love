@@ -1,0 +1,7 @@
+edge-tts
+kokoro-onnx
+soundfile
+numpy
+pycairo
+requests
+imageio-ffmpeg; platform_system == "Windows"

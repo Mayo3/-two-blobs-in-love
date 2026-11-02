@@ -1,0 +1,102 @@
+"""Writes a script for one fact with a free LLM, then holds it to the same bar as the
+hand-written samples. A script that keeps failing the checks is never rendered.
+"""
+import json
+import os
+
+from .captions import PALETTES
+from .cartoon.director import ACTIONS, describe_actions
+from .cartoon.scenes import Scene
+from .llm import chat_json
+from .produce import ROOT
+from .style import BANNED_PHRASES, MAX_SENTENCE_WORDS, MAX_WORDS, MIN_WORDS, check_script
+
+FORMATS = {
+    "story": "Tell how the study was done, like a short story, then land the finding and what it means for the viewer.",
+    "myth-vs-fact": "Open with the popular belief stated confidently, then overturn it with the finding.",
+    "experiment": "Walk through the experiment step by step (what researchers did, what happened), then the twist.",
+    "try-this": "Turn the finding into one small thing the viewer can try with their partner today.",
+    "quiz": "Open by making the viewer guess (e.g. which couples..., what happened when...), then reveal.",
+}
+
+SYSTEM = f"""You write scripts for "Two Blobs in Love", a TikTok channel of science-backed facts about couples.
+Each video is narrated over a cartoon of two cute blob characters who act out every line.
+
+Voice: a warm, clever friend telling you something surprising over coffee. Plain spoken English.
+Specific and concrete. A little playful. Never preachy, never salesy, never generic.
+
+Hard rules:
+- Use ONLY the fact you are given. Every number you say must appear in the fact. No other statistics.
+- Never invent details about the study (no made-up participant counts, places, or quotes).
+- {MIN_WORDS}-{MAX_WORDS} words in total, 6-10 lines. Each line is one or two short spoken sentences, at most {MAX_SENTENCE_WORDS} words per sentence.
+- Line 1 is the hook, at most 16 words. It must make someone stop scrolling: a surprising claim or concrete image, not a question like "Have you ever...".
+- Write numbers as digits and spell out "percent" (e.g. "86 percent") so the narrator reads them right.
+- Mark 1-4 key words or numbers with *asterisks* (they get highlighted).
+- The last line is a concrete takeaway or a specific question for the viewer. Never "follow for more" or "comment below".
+- At most one exclamation mark. No emojis. No hashtags in the script.
+- Never use these words or phrases: {", ".join(BANNED_PHRASES)}.
+
+Cartoon: for every line pick an action (or a list of 2-3 actions that split the line) from this list.
+Pick actions that literally show what the line says. Use "name:arg" only where the description mentions an arg.
+{describe_actions()}
+
+Scenes (pick one that fits the story): {", ".join(Scene.kinds)}.
+Palettes (caption highlight colours): {", ".join(PALETTES)}.
+
+Reply with JSON only:
+{{"title": "...", "scene": "...", "palette": "...", "lines": ["..."], "beats": ["action" or ["action", "action"], ...], "caption": "..."}}
+- "title": under 60 characters, the hook in other words (used as the video's name).
+- "beats" has exactly one entry per line.
+- "caption": the TikTok caption, one or two natural sentences (under 150 characters), no hashtags.
+"""
+
+
+def examples():
+    samples = json.load(open(os.path.join(ROOT, "samples", "scripts.json"), encoding="utf-8"))
+    keep = ("title", "scene", "palette", "lines", "beats")
+    return "\n\n".join(
+        f"Example ({s['format']}):\n" + json.dumps({k: s[k] for k in keep}, ensure_ascii=False) for s in samples
+    )
+
+
+def validate(script, fact):
+    problems = check_script(script, fact)
+    lines, beats = script.get("lines", []), script.get("beats", [])
+    if not 6 <= len(lines) <= 10:
+        problems.append(f"{len(lines)} lines (want 6-10)")
+    if len(beats) != len(lines):
+        problems.append(f"{len(beats)} beats for {len(lines)} lines")
+    for b in beats:
+        for part in b if isinstance(b, list) else [b]:
+            if not isinstance(part, str) or part.partition(":")[0] not in ACTIONS:
+                problems.append(f"unknown action '{part}'")
+    if script.get("scene") not in Scene.kinds:
+        problems.append(f"unknown scene '{script.get('scene')}'")
+    if script.get("palette") not in PALETTES:
+        problems.append(f"unknown palette '{script.get('palette')}'")
+    if not script.get("title") or len(script["title"]) > 70:
+        problems.append("title missing or too long")
+    if "#" in script.get("caption", ""):
+        problems.append("caption contains hashtags")
+    return problems
+
+
+def write_script(fact, fmt, tries=3):
+    """Return a validated script dict, or raise after `tries` failed attempts."""
+    user = (
+        f"Fact: {fact['claim']}\nSource: {fact['source']}\n\n"
+        f"Format: {fmt} — {FORMATS[fmt]}\n\n{examples()}\n\nWrite the new script."
+    )
+    problems = []
+    for attempt in range(tries):
+        prompt = user if not problems else (
+            f"{user}\n\nYour previous attempt:\n{json.dumps(script, ensure_ascii=False)}\n\n"
+            f"It failed these checks, fix every one:\n- " + "\n- ".join(problems)
+        )
+        script = chat_json(SYSTEM, prompt, temperature=0.8 if attempt == 0 else 0.6)
+        script["fact"], script["format"] = fact["id"], fmt
+        problems = validate(script, fact)
+        if not problems:
+            return script
+        print(f"attempt {attempt + 1} rejected: {problems}")
+    raise RuntimeError(f"no acceptable script after {tries} tries: {problems}")

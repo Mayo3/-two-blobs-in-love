@@ -1,0 +1,99 @@
+name: daily-video
+
+# Every morning: pick a fact, write the script with a free model (GitHub Models),
+# render the cartoon video, attach it to a GitHub release and push the download
+# link plus a ready-to-paste TikTok caption to your phone via ntfy.
+
+on:
+  schedule:
+    - cron: "0 5 * * *" # 06:00 CET / 07:00 CEST
+  workflow_dispatch:
+
+permissions:
+  contents: write # release + history commit
+  models: read # free GitHub Models access with the built-in token
+
+concurrency:
+  group: daily-video
+  cancel-in-progress: false
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: System packages
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg libcairo2-dev pkg-config
+          mkdir -p ~/.local/share/fonts && cp fonts/*.ttf ~/.local/share/fonts/ && fc-cache -f
+
+      - name: Python packages
+        run: pip install -r requirements.txt
+
+      - name: Cache voice model
+        uses: actions/cache@v4
+        with:
+          path: models
+          key: kokoro-v1.0
+
+      - name: Download voice model
+        run: |
+          mkdir -p models
+          base=https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0
+          for f in kokoro-v1.0.onnx voices-v1.0.bin; do
+            [ -f "models/$f" ] || curl -sSfL -o "models/$f" "$base/$f"
+          done
+
+      - name: Make video
+        id: make
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -m shorts.daily
+
+      - name: Publish to a release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VIDEO: ${{ steps.make.outputs.video }}
+          META: ${{ steps.make.outputs.meta }}
+          DAY: ${{ steps.make.outputs.date }}
+        run: |
+          tag="video-$DAY-r$GITHUB_RUN_NUMBER"
+          python -c "import json,os; print(json.load(open(os.environ['META']))['caption'])" > notes.txt
+          gh release create "$tag" "$VIDEO" --title "Video $DAY" --notes-file notes.txt
+          echo "url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/$tag/$(basename "$VIDEO")" >> "$GITHUB_OUTPUT"
+
+      - name: Save history
+        env:
+          DAY: ${{ steps.make.outputs.date }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/history.json
+          git commit -m "Video $DAY"
+          git push
+
+      - name: Notify phone
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          META: ${{ steps.make.outputs.meta }}
+          URL: ${{ steps.release.outputs.url }}
+        run: python -m shorts.notify "$META" "$URL"
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -H "Title: Today's TikTok video failed" -H "Tags: warning" -H "Click: $RUN_URL" \
+            -d "The daily-video run failed; tap to open the log." "https://ntfy.sh/$NTFY_TOPIC"
