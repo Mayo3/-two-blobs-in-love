@@ -5,22 +5,22 @@ narrated over a cartoon of two blob characters who act out every line.
 
 Every morning GitHub Actions:
 1. picks a fact from the curated bank (`shorts/facts.py`), rotating facts and formats so nothing repeats,
-2. writes the script with a free model (GitHub Models) — scripts must pass the anti-slop checks in `shorts/style.py` or get rewritten,
+2. writes the script with a free model (Google Gemini's free tier) — scripts must pass the anti-slop checks in `shorts/style.py` or get rewritten,
 3. renders the video (Kokoro voice, Cairo cartoon, ffmpeg),
 4. attaches it to a GitHub release and sends your phone a push with a download link and a ready-to-paste caption.
 
 You post it on TikTok yourself (about 30 seconds; add a trending sound). That's also your quality check.
 
-Everything is free: GitHub Actions, GitHub Models, Kokoro (open-source voice), ntfy.
+Everything is free: GitHub Actions, Gemini free tier, Kokoro (open-source voice), ntfy.
 
 ## Setup
 
 1. **Create the repo** on GitHub under your personal account (public is recommended — public repos get unlimited Actions minutes).
 2. **Phone notifications:** install the ntfy app and subscribe to a hard-to-guess topic, e.g. `twoblobs-7f3k9q`.
    In the repo: *Settings → Secrets and variables → Actions → New repository secret* → `NTFY_TOPIC` = that topic.
-3. **Run it once by hand:** *Actions → daily-video → Run workflow*. After ~5 minutes your phone should buzz.
-
-Optional: add a free Google Gemini key as secret `GEMINI_API_KEY` to use Gemini instead of GitHub Models.
+3. **AI writer:** get a free Google Gemini key at https://aistudio.google.com/apikey (no card needed) and add it
+   as repository secret `GEMINI_API_KEY`.
+4. **Run it once by hand:** *Actions → daily-video → Run workflow*. After ~5 minutes your phone should buzz.
 
 ## Running locally
 
@@ -30,7 +30,7 @@ python -m venv .venv && .venv/Scripts/pip install -r requirements.txt   # Window
 # https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0 into models/
 python make_sample.py                                      # render the 3 hand-written samples to out/
 python -m shorts.daily --script build/test-script.json     # render a ready-made script like the daily job
-GITHUB_TOKEN=... python -m shorts.daily                    # full run with the AI writer
+GEMINI_API_KEY=... python -m shorts.daily                  # full run with the AI writer
 ```
 
 ## Adding facts

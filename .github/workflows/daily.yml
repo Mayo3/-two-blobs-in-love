@@ -1,6 +1,6 @@
 name: daily-video
 
-# Every morning: pick a fact, write the script with a free model (GitHub Models),
+# Every morning: pick a fact, write the script with a free model (Gemini free tier),
 # render the cartoon video, attach it to a GitHub release and push the download
 # link plus a ready-to-paste TikTok caption to your phone via ntfy.
 
@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: write # release + history commit
-  models: read # free GitHub Models access with the built-in token
 
 concurrency:
   group: daily-video
@@ -55,7 +54,6 @@ jobs:
       - name: Make video
         id: make
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python -m shorts.daily
 
