@@ -7,9 +7,10 @@ import time
 
 import requests
 
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# The 2.5 models were closed to new API keys in late 2026; these are the replacements Google named.
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 # Tried when the main model gives no answer; it has its own, larger free daily quota.
-GEMINI_FALLBACK = os.environ.get("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash-lite")
+GEMINI_FALLBACK = os.environ.get("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
 
 
 def chat_json(system, user, temperature=0.8):
@@ -50,6 +51,6 @@ def gemini_chat(key, system, user, temperature):
                 return text
             problems.append(f"{model}: HTTP {r.status_code} {r.text[:300]!r}")
             print(f"Gemini: {problems[-1]}")
-            if r.status_code in (400, 401, 403):
-                break   # bad key or request; retrying won't help
+            if r.status_code in (400, 401, 403, 404):
+                break   # bad key, request or model name; retrying won't help
     raise SystemExit("Gemini gave no answer:\n" + "\n".join(problems))
