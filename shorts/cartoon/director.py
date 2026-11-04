@@ -19,10 +19,12 @@ STAGE_LIFT = 320  # the whole cartoon sits higher so the caption line fits below
 STAGE_ZOOM = 1.22  # and is zoomed in around the couple's feet so they fill the frame
 OFFSTAGE = 1350
 FOCUS = (540, GROUND - 230)  # camera zooms around the couple's faces
-CLOSE_UP = 0.09  # extra zoom on every other beat (jump-cut framing)
-PUSH_IN = 0.03  # slow zoom over the length of a beat
-PUNCH = 0.025  # quick zoom bump as a new beat starts
+CLOSE_UP = 0.07  # extra zoom on every other beat
+PUSH_IN = 0.025  # slow zoom over the length of a beat
+GLIDE = 2.5  # how quickly the camera eases to a new framing
 BOUNCE = 0.28  # seconds of squash-and-stretch when a beat starts
+WORD_BOB = 0.03  # squash on every spoken word
+EMPH_STRETCH = 0.09  # stretch up on *highlighted* words
 
 ACTIONS = {}
 
@@ -55,9 +57,10 @@ def timed_beats(beats, line_times):
 
 
 class Animator:
-    def __init__(self, scene, beats):
+    def __init__(self, scene, beats, words=()):
         self.scene = Scene(scene)
         self.beats = beats
+        self.words = [w for w in words if w.get("start") is not None]  # caption tokens with timings
         self.A = Blob("A", "ff9a8b", "sprout", AX, GROUND, 330, +1, seed=1)
         self.B = Blob("B", "b9a3f5", "bow", BX, GROUND, 312, -1, seed=2)
         self.B.twin_color = self.A.base_color
@@ -65,6 +68,7 @@ class Animator:
         self.S = Blob("S", "c9c6d3", None, OFFSTAGE, GROUND, 310, -1, seed=3)
         self.monitor = 0.3
         self.monitor_t = 0.3
+        self.zoom = 1.0
 
     def frame(self, ctx, t, dt):
         A, B, S = self.A, self.B, self.S
@@ -86,6 +90,7 @@ class Animator:
         if lt < BOUNCE:  # both react to every new beat with a little squash and stretch
             for blob in (A, B):
                 blob.tgt["squash"] += 0.07 * math.sin(math.pi * lt / BOUNCE)
+        self.move_to_speech(t)
         for blob in (A, B, S):
             blob.update(dt, t)
         self.monitor += (self.monitor_t - self.monitor) * (1 - math.exp(-3 * dt))
@@ -96,7 +101,7 @@ class Animator:
         ctx.translate(W / 2, GROUND - STAGE_LIFT)
         ctx.scale(STAGE_ZOOM, STAGE_ZOOM)
         ctx.translate(-W / 2, -GROUND)
-        self.camera(ctx, t, index, lt, dur)
+        self.camera(ctx, dt, index, lt, dur)
         self.scene.draw(ctx, t, self)
         for f in self.back:
             f(ctx)
@@ -107,18 +112,33 @@ class Animator:
             f(ctx)
         ctx.restore()
 
-    def camera(self, ctx, t, index, lt, dur):
-        """TikTok-style framing: every other beat jumps to a closer shot, each beat slowly
-        pushes in, a new beat lands with a small punch, and scary beats shake."""
-        zoom = 1 + (CLOSE_UP if index % 2 else 0) + PUSH_IN * clamp(lt / max(dur, 0.01))
-        zoom += PUNCH * (1 - ease(lt / 0.3))
-        dx = math.sin(t * 0.7) * 12
-        dy = 0.0
-        if self.beats and self.beats[index]["name"] in ("scared", "alone"):
-            dx += math.sin(t * 47) * 6
-            dy += math.cos(t * 53) * 5
-        ctx.translate(FOCUS[0] + dx, FOCUS[1] + dy)
-        ctx.scale(zoom, zoom)
+    def move_to_speech(self, t):
+        """Blobs bob on every spoken word; on highlighted words they stretch up, throw
+        their free arms up and sparkle. Added on top of whatever the action does."""
+        word = next((w for w in self.words if w["start"] <= t < w["end"]), None)
+        if word is None:
+            return
+        p = clamp((t - word["start"]) / max(word["end"] - word["start"], 0.05))
+        on_stage = [b for b in (self.A, self.B) if b.tgt["x"] != OFFSTAGE]
+        for b in on_stage:
+            b.tgt["squash"] += WORD_BOB * math.sin(math.pi * p)
+        if not word["emph"]:
+            return
+        for b in on_stage:
+            b.tgt["squash"] -= EMPH_STRETCH * math.sin(math.pi * p)
+            if b.tgt["arm_out"] < 40:  # only arms the action isn't already using
+                b.tgt["arm_out"] = 125
+            if b.eyes == "open":
+                b.eyes = "wide"
+        lt = t - word["start"]
+        self.front.append(lambda ctx: P.sparkles(ctx, lt, 540, 1250, spread=300))
+
+    def camera(self, ctx, dt, index, lt, dur):
+        """Calm framing: every other beat glides to a closer shot, and each beat pushes in slowly."""
+        target = 1 + (CLOSE_UP if index % 2 else 0) + PUSH_IN * clamp(lt / max(dur, 0.01))
+        self.zoom += (target - self.zoom) * (1 - math.exp(-GLIDE * dt))
+        ctx.translate(*FOCUS)
+        ctx.scale(self.zoom, self.zoom)
         ctx.translate(-FOCUS[0], -FOCUS[1])
 
     # helpers used by actions

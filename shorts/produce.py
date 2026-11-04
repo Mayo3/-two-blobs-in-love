@@ -11,7 +11,7 @@ from .tts import synthesize
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONTS = os.path.join(ROOT, "fonts")
 CHANNEL = "Two Blobs in Love"
-VOICES = ["af_heart", "am_michael"]  # Kokoro voices; channel alternates between them
+VOICES = ["af_heart"]  # Kokoro voice; one narrator so the channel always sounds the same
 
 
 def produce(script, work, out_path, voice, style="cartoon"):
@@ -36,6 +36,6 @@ def produce(script, work, out_path, voice, style="cartoon"):
         clips = pick_clips(script["footage"], seed=os.path.basename(out_path))
         render_footage(work, audio, "captions.ass", out_path, script["palette"], duration, FONTS, clips, lines)
     else:
-        animator = Animator(script["scene"], timed_beats(script["beats"], lines))
+        animator = Animator(script["scene"], timed_beats(script["beats"], lines), tokens)
         render_cartoon(work, audio, "captions.ass", out_path, script["palette"], duration, FONTS, animator)
     return duration
