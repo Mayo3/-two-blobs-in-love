@@ -22,7 +22,7 @@ RECENT_FACTS = 4  # prefer a topic and researcher not seen in this many videos
 def author(fact):
     """Lead researcher's surname, e.g. 'Gottman' from 'Gottman & Silver, ...'."""
     return fact["source"].split(",")[0].split("&")[0].split(" et al")[0].strip()
-HASHTAGS = "#couples #relationships #lovefacts #psychologyfacts #couplegoals"
+HASHTAGS = "#relationshipadvice #couplestips #psychologyfacts #lovefacts #couples"
 
 
 def load_history():

@@ -9,7 +9,7 @@ from .cartoon.director import ACTIONS, describe_actions
 from .cartoon.scenes import Scene
 from .llm import chat_json
 from .produce import ROOT
-from .style import BANNED_PHRASES, MAX_SENTENCE_WORDS, MAX_WORDS, MIN_WORDS, check_script
+from .style import BANNED_PHRASES, MAX_HOOK_WORDS, MAX_SENTENCE_WORDS, MAX_WORDS, MIN_WORDS, check_script
 
 FORMATS = {
     "story": "Tell how the study was done, like a short story, then land the finding and what it means for the viewer.",
@@ -28,11 +28,11 @@ Specific and concrete. A little playful. Never preachy, never salesy, never gene
 Hard rules:
 - Use ONLY the fact you are given. Every number you say must appear in the fact. No other statistics.
 - Never invent details about the study (no made-up participant counts, places, or quotes).
-- {MIN_WORDS}-{MAX_WORDS} words in total, 6-10 lines. Each line is one or two short spoken sentences, at most {MAX_SENTENCE_WORDS} words per sentence.
-- Line 1 is the hook, at most 16 words. It must make someone stop scrolling: a surprising claim or concrete image, not a question like "Have you ever...".
+- {MIN_WORDS}-{MAX_WORDS} words in total, 5-8 lines. Short is the point: every line must earn its place. Each line is one or two short spoken sentences, at most {MAX_SENTENCE_WORDS} words per sentence.
+- Line 1 is the hook, at most {MAX_HOOK_WORDS} words. It must make someone stop scrolling: a surprising claim or concrete image, not a question like "Have you ever...".
 - Write numbers as digits and spell out "percent" (e.g. "86 percent") so the narrator reads them right.
 - Mark 1-4 key words or numbers with *asterisks* (they get highlighted).
-- The last line is a concrete takeaway or a specific question for the viewer. Never "follow for more" or "comment below".
+- The last line is a question the viewer can answer in a word or two (yes or no, this or that, A or B), so they reply in the comments. Never "follow for more" or "comment below".
 - At most one exclamation mark. No emojis. No hashtags in the script.
 - Never use these words or phrases: {", ".join(BANNED_PHRASES)}.
 
@@ -44,7 +44,7 @@ Palettes (caption highlight colours): {", ".join(PALETTES)}.
 
 Reply with JSON only:
 {{"title": "...", "scene": "...", "palette": "...", "lines": ["..."], "beats": ["action" or ["action", "action"], ...], "caption": "..."}}
-- "title": under 60 characters, the hook in other words (used as the video's name).
+- "title": under 40 characters, the hook in other words. It is shown in big letters for the first seconds, so make it punchy.
 - "beats" has exactly one entry per line.
 - "caption": the TikTok caption, one or two natural sentences (under 150 characters), no hashtags.
 """
@@ -61,8 +61,8 @@ def examples():
 def validate(script, fact, scenes=Scene.kinds):
     problems = check_script(script, fact)
     lines, beats = script.get("lines", []), script.get("beats", [])
-    if not 6 <= len(lines) <= 10:
-        problems.append(f"{len(lines)} lines (want 6-10)")
+    if not 5 <= len(lines) <= 8:
+        problems.append(f"{len(lines)} lines (want 5-8)")
     if len(beats) != len(lines):
         problems.append(f"{len(beats)} beats for {len(lines)} lines")
     for b in beats:
@@ -73,7 +73,7 @@ def validate(script, fact, scenes=Scene.kinds):
         problems.append(f"scene '{script.get('scene')}' is not one of: {', '.join(scenes)}")
     if script.get("palette") not in PALETTES:
         problems.append(f"unknown palette '{script.get('palette')}'")
-    if not script.get("title") or len(script["title"]) > 70:
+    if not script.get("title") or len(script["title"]) > 45:
         problems.append("title missing or too long")
     if "#" in script.get("caption", ""):
         problems.append("caption contains hashtags")

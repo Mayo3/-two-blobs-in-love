@@ -17,8 +17,9 @@ BANNED_PHRASES = [
 ]
 
 # Things a good script must have.
-MIN_WORDS, MAX_WORDS = 70, 135          # about 25-50 seconds of speech
+MIN_WORDS, MAX_WORDS = 45, 75           # about 15-28 seconds: short videos get watched to the end
 MAX_SENTENCE_WORDS = 22                 # spoken sentences stay short
+MAX_HOOK_WORDS = 12                     # the first line has about 2 seconds to stop the scroll
 
 
 def plain_text(lines):
@@ -46,8 +47,10 @@ def check_script(script, fact):
     if not any("*" in line for line in script["lines"]):
         problems.append("no *emphasis* marked")
     first = script["lines"][0].replace("*", "")
-    if len(first.split()) > 16:
-        problems.append("hook (first line) longer than 16 words")
+    if len(first.split()) > MAX_HOOK_WORDS:
+        problems.append(f"hook (first line) longer than {MAX_HOOK_WORDS} words")
+    if not script["lines"][-1].rstrip().endswith("?"):
+        problems.append("last line is not a question for the viewer")
     if first.rstrip().endswith("?") and first.lower().startswith(("have you", "do you", "are you", "ever wonder")):
         problems.append("lazy question hook")
     # Every number in the script must appear in the fact (no invented stats).

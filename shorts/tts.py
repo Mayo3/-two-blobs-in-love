@@ -17,7 +17,7 @@ MODEL = os.path.join(ROOT, "models", "kokoro-v1.0.onnx")
 VOICES_BIN = os.path.join(ROOT, "models", "voices-v1.0.bin")
 LINE_PAUSE = {".": 0.42, "?": 0.48, "!": 0.42, "…": 0.5}  # silence after a line, by its last char
 DEFAULT_LINE_PAUSE = 0.3
-LEAD_IN = 0.45  # silence before the first word, so players don't clip it
+LEAD_IN = 0.15  # just enough silence that players don't clip the first word
 SPEED = 0.92  # a little slower than default reads calmer and more natural
 # a person never reads every line at the same pace or pauses the same length; small random
 # changes per line make the narration sound much less robotic (seeded by the script, so repeatable)

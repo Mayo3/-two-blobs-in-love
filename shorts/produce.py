@@ -29,7 +29,7 @@ def produce(script, work, out_path, voice, style="cartoon"):
     duration = audio_duration(os.path.join(work, audio)) + 0.6
     tokens = align(tokenize(script["lines"]), words)
     with open(os.path.join(work, "captions.ass"), "w", encoding="utf-8") as f:
-        f.write(build_ass(tokens, duration, script["palette"], fact["source"], CHANNEL, script["title"]))
+        f.write(build_ass(tokens, duration, script["palette"], fact["source"], CHANNEL, script["title"], hook=True))
     lines = line_times(tokens, len(script["lines"]), duration)
     if style == "footage":
         from .footage import pick_clips

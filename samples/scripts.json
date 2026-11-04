@@ -2,31 +2,25 @@
   {
     "fact": "bids",
     "format": "story-number",
-    "voice": "af_heart",
+    "voice": "heart-nova",
     "palette": "plum",
     "title": "The 86% habit of couples who last",
     "lines": [
-      "One tiny habit predicted which newlyweds would *still be together* six years later.",
+      "One tiny habit predicted which newlyweds *stayed together*.",
       "Psychologist John Gottman watched couples spend a weekend in a lab apartment.",
-      "He was waiting for moments like this: one partner says, *look at that bird.*",
-      "That's a bid. A small request for attention.",
-      "The couples who stayed married turned toward those bids *86 percent* of the time.",
-      "The couples who divorced? *33 percent.*",
-      "Not the big fights. Not the anniversaries.",
-      "Just whether you look up when they point at the bird.",
-      "So next time they say *look at this*... look."
+      "One partner says, *look at that bird.* That's a bid for attention.",
+      "Couples who stayed married turned toward those bids *86 percent* of the time.",
+      "Couples who divorced? *33 percent.*",
+      "Be honest: when they point at the bird, do you look up?"
     ],
     "scene": "home",
     "beats": [
       "turn_toward",
       "watched",
       "point_bird",
-      "bid",
       "turn_toward",
       "ignore",
-      "shrug",
-      "point_bird",
-      "hug"
+      "ask_viewer"
     ],
     "footage": [
       "newlywed couple happy",
@@ -34,27 +28,22 @@
       "bird flying",
       "couple talking kitchen",
       "couple smiling together",
-      "woman using phone bored",
-      "couple argument",
-      "couple looking up sky",
-      "couple hugging"
+      "woman using phone bored"
     ]
   },
   {
     "fact": "hand-holding",
     "format": "experiment",
-    "voice": "am_michael",
+    "voice": "heart-nova",
     "palette": "night",
     "title": "What holding hands does to your brain",
     "lines": [
-      "Holding hands changes what your brain does with *fear*.",
-      "Researchers put married women in a brain scanner and told them a small shock might come.",
-      "Then they tried it three ways: no hand, a stranger's hand, or their *husband's* hand.",
-      "With their husband, the brain's threat response dropped *the most*.",
-      "And the happier the marriage, the *calmer* the brain stayed.",
-      "A stranger's hand helped a little. The person they trusted helped far more.",
-      "So when your partner is nervous before something big, skip the pep talk.",
-      "Just *hold their hand*."
+      "Your partner's hand changes how your brain handles *fear*.",
+      "Researchers warned married women that a small shock might come.",
+      "No hand, a stranger's hand, or their *husband's* hand.",
+      "Their husband's hand calmed the brain *the most*.",
+      "And the happier the marriage, the *calmer* it stayed.",
+      "So whose hand do you grab first?"
     ],
     "scene": "lab",
     "beats": [
@@ -67,9 +56,7 @@
       ],
       "calm",
       "calm",
-      "stranger",
-      "nervous",
-      "hold_hands"
+      "ask_viewer"
     ],
     "footage": [
       "couple holding hands",
@@ -77,27 +64,22 @@
       "hands touching",
       "couple holding hands walking",
       "happy elderly couple",
-      "handshake",
-      "nervous woman",
-      "holding hands close up"
+      "handshake"
     ]
   },
   {
     "fact": "faces-alike",
     "format": "myth-vs-fact",
-    "voice": "af_heart",
+    "voice": "heart-nova",
     "palette": "sunset",
     "title": "Do couples really start to look alike?",
     "lines": [
       "Couples who've been together for decades start to *look alike*. Right?",
       "A famous 1987 study said yes. So Stanford researchers checked again.",
-      "They gathered photos of *517 couples*, taken early on and again 20 to 69 years later.",
-      "Both people and a face-recognition algorithm compared them.",
-      "The result: couples did *not* grow more alike over time.",
+      "They compared photos of *517 couples*, taken 20 to 69 years apart.",
+      "Couples did *not* grow more alike over time.",
       "They already looked similar *from the very start*.",
-      "So we don't turn into our partner's twin.",
-      "We just tend to pick someone who looks a bit like us.",
-      "Be honest... does yours?"
+      "Be honest: do you and your partner look alike?"
     ],
     "scene": "park",
     "beats": [
@@ -108,10 +90,10 @@
         "old"
       ],
       "compare",
-      "unmatch",
-      "young",
-      "idle",
-      "hearts",
+      [
+        "unmatch",
+        "young"
+      ],
       "ask_viewer"
     ],
     "footage": [
@@ -120,10 +102,7 @@
       "vintage photo album",
       "face recognition",
       "old couple laughing",
-      "young couple",
-      "couple portrait",
-      "couple selfie",
-      "couple smiling"
+      "young couple"
     ]
   }
 ]
