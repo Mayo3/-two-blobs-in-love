@@ -14,5 +14,13 @@
     "scene": "lab",
     "voice": "am_michael",
     "title": "The exact math of lasting love"
+  },
+  {
+    "date": "2026-11-04",
+    "fact": "contempt",
+    "format": "try-this",
+    "scene": "home",
+    "voice": "af_heart",
+    "title": "The single strongest predictor of divorce"
   }
 ]
