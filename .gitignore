@@ -5,3 +5,4 @@ out/
 __pycache__/
 .env
 models/
+voice-lab/

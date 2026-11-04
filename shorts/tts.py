@@ -7,6 +7,7 @@ Edge TTS (voice names starting with "en-") is kept as a fallback.
 """
 import asyncio
 import os
+import random
 import re
 
 import numpy as np
@@ -18,6 +19,12 @@ LINE_PAUSE = {".": 0.42, "?": 0.48, "!": 0.42, "…": 0.5}  # silence after a li
 DEFAULT_LINE_PAUSE = 0.3
 LEAD_IN = 0.45  # silence before the first word, so players don't clip it
 SPEED = 0.92  # a little slower than default reads calmer and more natural
+# a person never reads every line at the same pace or pauses the same length; small random
+# changes per line make the narration sound much less robotic (seeded by the script, so repeatable)
+PACE_JITTER = (-0.04, 0.05)  # added to SPEED per line
+PAUSE_JITTER = (0.75, 1.35)  # multiplies the pause after each line
+# custom voices: weighted mixes of Kokoro's built-in voices
+BLENDS = {"heart-nova": {"af_heart": 0.6, "af_nova": 0.4}}
 
 _kokoro = None
 
@@ -120,14 +127,16 @@ def _kokoro_lines(lines, voice, out_path, speed):
     import soundfile as sf
 
     k = _engine()
+    style = sum(w * k.get_voice_style(n) for n, w in BLENDS[voice].items()) if voice in BLENDS else voice
+    rng = random.Random(" ".join(lines))
     sr = 24000
     chunks, words, t = [np.zeros(int(sr * LEAD_IN), dtype=np.float32)], [], LEAD_IN
     for line in lines:
-        audio, sr = k.create(line, voice=voice, speed=speed, lang="en-us")
+        audio, sr = k.create(line, voice=style, speed=speed + rng.uniform(*PACE_JITTER), lang="en-us")
         spans = _speech_spans(audio, sr)
         for w in _time_line(line.split(), spans):
             words.append({"text": w["text"], "start": t + w["start"], "end": t + w["end"]})
-        pause = LINE_PAUSE.get(line.rstrip()[-1:], DEFAULT_LINE_PAUSE)
+        pause = LINE_PAUSE.get(line.rstrip()[-1:], DEFAULT_LINE_PAUSE) * rng.uniform(*PAUSE_JITTER)
         chunks += [audio, np.zeros(int(sr * pause), dtype=np.float32)]
         t += len(audio) / sr + pause
     sf.write(out_path, np.concatenate(chunks), sr)
