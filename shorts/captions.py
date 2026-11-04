@@ -9,6 +9,7 @@ W, H = 1080, 1920
 CAPTION_Y = 1440
 HEADLINE_Y = 540
 HOOK_SECONDS = 2.8  # how long the big hook title stays up
+HOOK_Y = 570  # centre of the hook title (and the cloud behind it)
 MAX_WORDS_PER_CHUNK = 3
 MAX_CHARS_PER_CHUNK = 15  # keeps the line clear of TikTok's buttons on the right
 
@@ -183,7 +184,7 @@ Style: Caption,Archivo Black,80,{white},{white},{ass_color('3b2340')},{shadow},0
 Style: Label,DM Serif Display,54,{white},{white},{ass_color('3b2340')},{shadow},0,1,0,0,100,100,1,0,1,4,3,8,80,80,300,1
 Style: Headline,DM Serif Display,150,{emph},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,7,6,5,90,90,0,1
 Style: Title,DM Serif Display,104,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,6,6,5,90,90,0,1
-Style: Hook,Archivo Black,74,{ass_color('3b2340')},{ass_color('3b2340')},{white},{ass_color('000000', 'FF')},0,0,0,0,100,100,0,0,3,22,0,5,90,90,0,1
+Style: Hook,Fredoka SemiBold,76,{ass_color('3b2340')},{ass_color('3b2340')},{white},{ass_color('000000', 'FF')},0,0,0,0,100,100,0,0,1,0,0,5,90,90,0,1
 Style: Source,DM Serif Display,34,{white},{white},{ass_color('3b2340')},{shadow},0,1,0,0,100,100,0,0,1,4,2,8,90,90,370,1
 
 [Events]
@@ -193,7 +194,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     ev.append(f"Dialogue: 1,{ts(0)},{ts(duration)},Label,,0,0,0,,{{\\fad(400,0)}}{esc(series_label)}")
     heads = headlines(tokens, title, duration) if big_text else []
     if hook and title:
-        # TikTok-style: dark text on a solid white box, readable on every scene and palette
+        # dark text inside a white cloud (drawn by the cartoon), readable on every scene and palette
         heads = [{"start": 0.0, "end": min(HOOK_SECONDS, duration), "text": title, "title": True, "style": "Hook"}]
     source_at = HOOK_SECONDS if hook else 1.0  # don't clutter the hook
     ev.append(f"Dialogue: 1,{ts(source_at)},{ts(duration)},Source,,0,0,0,,{{\\fad(600,0)}}Source: {esc(source)}")
@@ -201,7 +202,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     for it in heads:
         style = it.get("style") or ("Title" if it["title"] else "Headline")
         anim = "\\fad(250,200)\\fscx92\\fscy92\\t(0,220,\\fscx100\\fscy100)"
-        ev.append(f"Dialogue: 2,{ts(it['start'])},{ts(it['end'])},{style},,0,0,0,,{{\\pos({W // 2},{HEADLINE_Y})\\q2{anim}}}{wrap(esc(it['text']), 14 if it['title'] else 12)}")
+        y = HOOK_Y if style == "Hook" else HEADLINE_Y
+        ev.append(f"Dialogue: 2,{ts(it['start'])},{ts(it['end'])},{style},,0,0,0,,{{\\pos({W // 2},{y})\\q2{anim}}}{wrap(esc(it['text']), 14 if it['title'] else 12)}")
 
     chunks = chunk(tokens)
     for ci, ch in enumerate(chunks):

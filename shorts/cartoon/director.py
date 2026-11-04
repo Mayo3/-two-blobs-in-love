@@ -11,7 +11,7 @@ import cairo
 
 from . import props as P
 from .characters import Blob
-from .draw import clamp, ease
+from .draw import clamp, ease, ease_out_back, hexc, puff
 from .scenes import GROUND, H, W, Scene
 
 AX, BX = 360, 720
@@ -23,6 +23,7 @@ CLOSE_UP = 0.07  # extra zoom on every other beat
 PUSH_IN = 0.025  # slow zoom over the length of a beat
 GLIDE = 2.5  # how quickly the camera eases to a new framing
 BOUNCE = 0.28  # seconds of squash-and-stretch when a beat starts
+HOOK_CLOUD = 232  # size of the cloud behind the hook title
 WORD_BOB = 0.03  # squash on every spoken word
 EMPH_STRETCH = 0.09  # stretch up on *highlighted* words
 
@@ -57,9 +58,10 @@ def timed_beats(beats, line_times):
 
 
 class Animator:
-    def __init__(self, scene, beats, words=()):
+    def __init__(self, scene, beats, words=(), hook=None):
         self.scene = Scene(scene)
         self.beats = beats
+        self.hook = hook  # (seconds, centre y) of the cloud behind the hook title, or None
         self.words = [w for w in words if w.get("start") is not None]  # caption tokens with timings
         self.A = Blob("A", "ff9a8b", "sprout", AX, GROUND, 330, +1, seed=1)
         self.B = Blob("B", "b9a3f5", "bow", BX, GROUND, 312, -1, seed=2)
@@ -110,6 +112,21 @@ class Animator:
         B.draw(ctx, t)
         for f in self.front:
             f(ctx)
+        ctx.restore()
+        if self.hook and t < self.hook[0]:
+            self.hook_cloud(ctx, t, *self.hook)
+
+    def hook_cloud(self, ctx, t, seconds, y):
+        """Puffy white cloud the hook title sits in: pops in, floats, fades as the title goes."""
+        pop = 0.75 + 0.25 * ease_out_back(min(1, t * 3.5))
+        fade = clamp((seconds - t) / 0.25)
+        ctx.save()
+        ctx.translate(W / 2, y + 14 + math.sin(t * 2.2) * 6)  # the bumps sit high, so centre the body on the text
+        ctx.scale(pop * 1.3, pop)  # wider than tall, room for three lines of text
+        ctx.push_group()
+        puff(ctx, 0, 0, HOOK_CLOUD, hexc("fffaf7"))
+        ctx.pop_group_to_source()
+        ctx.paint_with_alpha(fade)
         ctx.restore()
 
     def move_to_speech(self, t):

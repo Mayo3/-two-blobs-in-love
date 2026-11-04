@@ -1,7 +1,7 @@
 """Script → finished video. Shared by the sample renderer and the daily job."""
 import os
 
-from .captions import align, build_ass, line_times, tokenize
+from .captions import HOOK_SECONDS, HOOK_Y, align, build_ass, line_times, tokenize
 from .cartoon.director import Animator, timed_beats
 from .facts import FACT_BY_ID
 from .render import audio_duration, render_cartoon, render_footage
@@ -36,6 +36,6 @@ def produce(script, work, out_path, voice, style="cartoon"):
         clips = pick_clips(script["footage"], seed=os.path.basename(out_path))
         render_footage(work, audio, "captions.ass", out_path, script["palette"], duration, FONTS, clips, lines)
     else:
-        animator = Animator(script["scene"], timed_beats(script["beats"], lines), tokens)
+        animator = Animator(script["scene"], timed_beats(script["beats"], lines), tokens, hook=(HOOK_SECONDS, HOOK_Y))
         render_cartoon(work, audio, "captions.ass", out_path, script["palette"], duration, FONTS, animator)
     return duration
