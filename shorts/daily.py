@@ -15,6 +15,7 @@ from .produce import ROOT, VOICES, produce
 
 HISTORY = os.path.join(ROOT, "state", "history.json")
 REUSE_AFTER_DAYS = 20  # a fact can come back, in a format not used for it yet, after this long
+RECENT_SCENES = 2  # a scene is not used again until this many videos later
 HASHTAGS = "#couples #relationships #lovefacts #psychologyfacts #couplegoals"
 
 
@@ -55,6 +56,14 @@ def pick(history, today):
     return fact, options[0]
 
 
+def scene_options(history):
+    """Scenes the writer may choose from: any not used in the last RECENT_SCENES videos."""
+    from .cartoon.scenes import Scene
+
+    recent = {h.get("scene") for h in history[-RECENT_SCENES:]}
+    return [k for k in Scene.kinds if k not in recent] or list(Scene.kinds)
+
+
 def tiktok_caption(script, fact):
     return f"{script['caption']} (Source: {fact['source']}) {HASHTAGS}"
 
@@ -76,7 +85,9 @@ def main():
         from .writer import write_script
         fact, fmt = pick(history, today)
         print(f"fact: {fact['id']}  format: {fmt}")
-        script = write_script(fact, fmt)
+        scenes = scene_options(history)
+        print(f"scenes: {', '.join(scenes)}")
+        script = write_script(fact, fmt, scenes)
 
     voice = VOICES[len(history) % len(VOICES)]
     name = f"{today.isoformat()}-{fact['id']}"
@@ -85,14 +96,14 @@ def main():
     duration = produce(script, os.path.join(ROOT, "build", name), video, voice)
 
     meta = {
-        "date": today.isoformat(), "fact": fact["id"], "format": script["format"], "voice": voice,
+        "date": today.isoformat(), "fact": fact["id"], "format": script["format"], "scene": script["scene"], "voice": voice,
         "title": script["title"], "caption": tiktok_caption(script, fact), "source": fact["source"],
         "video": video, "duration": round(duration, 1), "script": script,
     }
     meta_path = os.path.join(out_dir, "meta.json")
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
-    history.append({k: meta[k] for k in ("date", "fact", "format", "voice", "title")})
+    history.append({k: meta[k] for k in ("date", "fact", "format", "scene", "voice", "title")})
     save_history(history)
     print(f"{video}  ({duration:.1f}s)\n{meta['caption']}")
 

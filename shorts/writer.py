@@ -40,7 +40,6 @@ Cartoon: for every line pick an action (or a list of 2-3 actions that split the 
 Pick actions that literally show what the line says. Use "name:arg" only where the description mentions an arg.
 {describe_actions()}
 
-Scenes (pick one that fits the story): {", ".join(Scene.kinds)}.
 Palettes (caption highlight colours): {", ".join(PALETTES)}.
 
 Reply with JSON only:
@@ -59,7 +58,7 @@ def examples():
     )
 
 
-def validate(script, fact):
+def validate(script, fact, scenes=Scene.kinds):
     problems = check_script(script, fact)
     lines, beats = script.get("lines", []), script.get("beats", [])
     if not 6 <= len(lines) <= 10:
@@ -70,8 +69,8 @@ def validate(script, fact):
         for part in b if isinstance(b, list) else [b]:
             if not isinstance(part, str) or part.partition(":")[0] not in ACTIONS:
                 problems.append(f"unknown action '{part}'")
-    if script.get("scene") not in Scene.kinds:
-        problems.append(f"unknown scene '{script.get('scene')}'")
+    if script.get("scene") not in scenes:
+        problems.append(f"scene '{script.get('scene')}' is not one of: {', '.join(scenes)}")
     if script.get("palette") not in PALETTES:
         problems.append(f"unknown palette '{script.get('palette')}'")
     if not script.get("title") or len(script["title"]) > 70:
@@ -81,11 +80,13 @@ def validate(script, fact):
     return problems
 
 
-def write_script(fact, fmt, tries=3):
+def write_script(fact, fmt, scenes=Scene.kinds, tries=3):
     """Return a validated script dict, or raise after `tries` failed attempts."""
     user = (
         f"Fact: {fact['claim']}\nSource: {fact['source']}\n\n"
-        f"Format: {fmt} — {FORMATS[fmt]}\n\n{examples()}\n\nWrite the new script."
+        f"Format: {fmt} — {FORMATS[fmt]}\n\n"
+        f"Scene: pick the one of these that fits the story best: {', '.join(scenes)}.\n\n"
+        f"{examples()}\n\nWrite the new script."
     )
     problems = []
     for attempt in range(tries):
@@ -95,7 +96,7 @@ def write_script(fact, fmt, tries=3):
         )
         script = chat_json(SYSTEM, prompt, temperature=0.8 if attempt == 0 else 0.6)
         script["fact"], script["format"] = fact["id"], fmt
-        problems = validate(script, fact)
+        problems = validate(script, fact, scenes)
         if not problems:
             return script
         print(f"attempt {attempt + 1} rejected: {problems}")
