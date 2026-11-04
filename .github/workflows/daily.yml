@@ -5,8 +5,12 @@ name: daily-video
 # link plus a ready-to-paste TikTok caption to your phone via ntfy.
 
 on:
+  # GitHub delays or drops scheduled runs at busy times (especially on the hour), so there
+  # are three tries a morning off the hour; later ones stop early if the video already exists.
   schedule:
-    - cron: "0 5 * * *" # 06:00 CET / 07:00 CEST
+    - cron: "17 4 * * *" # 05:17 CET / 06:17 CEST
+    - cron: "47 5 * * *"
+    - cron: "17 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -23,27 +27,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Already made today?
+        id: done
+        if: github.event_name == 'schedule'
+        run: |
+          if grep -q "\"date\": \"$(date -u +%F)\"" state/history.json 2>/dev/null; then
+            echo "Today's video already exists; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.done.outputs.skip != 'true'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: System packages
+        if: steps.done.outputs.skip != 'true'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q ffmpeg libcairo2-dev pkg-config
           mkdir -p ~/.local/share/fonts && cp fonts/*.ttf ~/.local/share/fonts/ && fc-cache -f
 
       - name: Python packages
+        if: steps.done.outputs.skip != 'true'
         run: pip install -r requirements.txt
 
       - name: Cache voice model
+        if: steps.done.outputs.skip != 'true'
         uses: actions/cache@v4
         with:
           path: models
           key: kokoro-v1.0
 
       - name: Download voice model
+        if: steps.done.outputs.skip != 'true'
         run: |
           mkdir -p models
           base=https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0
@@ -52,12 +70,14 @@ jobs:
           done
 
       - name: Make video
+        if: steps.done.outputs.skip != 'true'
         id: make
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python -m shorts.daily
 
       - name: Publish to a release
+        if: steps.done.outputs.skip != 'true'
         id: release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,6 +91,7 @@ jobs:
           echo "url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/$tag/$(basename "$VIDEO")" >> "$GITHUB_OUTPUT"
 
       - name: Save history
+        if: steps.done.outputs.skip != 'true'
         env:
           DAY: ${{ steps.make.outputs.date }}
         run: |
@@ -81,6 +102,7 @@ jobs:
           git push
 
       - name: Notify phone
+        if: steps.done.outputs.skip != 'true'
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           META: ${{ steps.make.outputs.meta }}
