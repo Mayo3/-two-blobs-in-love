@@ -16,6 +16,12 @@ from .produce import ROOT, VOICES, produce
 HISTORY = os.path.join(ROOT, "state", "history.json")
 REUSE_AFTER_DAYS = 20  # a fact can come back, in a format not used for it yet, after this long
 RECENT_SCENES = 2  # a scene is not used again until this many videos later
+RECENT_FACTS = 4  # prefer a topic and researcher not seen in this many videos
+
+
+def author(fact):
+    """Lead researcher's surname, e.g. 'Gottman' from 'Gottman & Silver, ...'."""
+    return fact["source"].split(",")[0].split("&")[0].split(" et al")[0].strip()
 HASHTAGS = "#couples #relationships #lovefacts #psychologyfacts #couplegoals"
 
 
@@ -45,7 +51,12 @@ def pick(history, today):
     stale = sorted((f for f in facts if f["id"] in last and last[f["id"]] <= cutoff), key=lambda f: last[f["id"]])
     if not fresh and not stale:
         raise SystemExit("Fact bank exhausted: every fact was used in the last %d days. Add facts to shorts/facts.py." % REUSE_AFTER_DAYS)
-    fact = (fresh or stale)[0]
+    # vary the subject: skip facts whose topic or researcher featured in the last few videos
+    recent = [FACT_BY_ID[h["fact"]] for h in history[-RECENT_FACTS:] if h["fact"] in FACT_BY_ID]
+    topics, authors = {f["topic"] for f in recent}, {author(f) for f in recent}
+    pool = fresh or stale
+    pool.sort(key=lambda f: (f["topic"] in topics) + (author(f) in authors))  # stable: keeps bank order on ties
+    fact = pool[0]
 
     used_for_fact = {h["format"] for h in history if h["fact"] == fact["id"]}
     if fact["topic"] == "myth" and "myth-vs-fact" not in used_for_fact:

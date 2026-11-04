@@ -18,6 +18,11 @@ AX, BX = 360, 720
 STAGE_LIFT = 320  # the whole cartoon sits higher so the caption line fits below it
 STAGE_ZOOM = 1.22  # and is zoomed in around the couple's feet so they fill the frame
 OFFSTAGE = 1350
+FOCUS = (540, GROUND - 230)  # camera zooms around the couple's faces
+CLOSE_UP = 0.09  # extra zoom on every other beat (jump-cut framing)
+PUSH_IN = 0.03  # slow zoom over the length of a beat
+PUNCH = 0.025  # quick zoom bump as a new beat starts
+BOUNCE = 0.28  # seconds of squash-and-stretch when a beat starts
 
 ACTIONS = {}
 
@@ -70,13 +75,17 @@ class Animator:
         S.tgt["look_x"] = -0.5
         self.monitor_t = 0.3
         self.back, self.front = [], []
-        for b in self.beats:
+        index, lt, dur = 0, t, 1.0
+        for index, b in enumerate(self.beats):
             if b["start"] <= t < b["end"] or (b is self.beats[-1] and t >= b["start"]):
                 fn = ACTIONS[b["name"]][0]
                 dur = b["end"] - b["start"]
                 lt = t - b["start"]
                 fn(self, lt, clamp(lt / max(dur, 0.01)), dur, b["arg"])
                 break
+        if lt < BOUNCE:  # both react to every new beat with a little squash and stretch
+            for blob in (A, B):
+                blob.tgt["squash"] += 0.07 * math.sin(math.pi * lt / BOUNCE)
         for blob in (A, B, S):
             blob.update(dt, t)
         self.monitor += (self.monitor_t - self.monitor) * (1 - math.exp(-3 * dt))
@@ -87,6 +96,7 @@ class Animator:
         ctx.translate(W / 2, GROUND - STAGE_LIFT)
         ctx.scale(STAGE_ZOOM, STAGE_ZOOM)
         ctx.translate(-W / 2, -GROUND)
+        self.camera(ctx, t, index, lt, dur)
         self.scene.draw(ctx, t, self)
         for f in self.back:
             f(ctx)
@@ -96,6 +106,20 @@ class Animator:
         for f in self.front:
             f(ctx)
         ctx.restore()
+
+    def camera(self, ctx, t, index, lt, dur):
+        """TikTok-style framing: every other beat jumps to a closer shot, each beat slowly
+        pushes in, a new beat lands with a small punch, and scary beats shake."""
+        zoom = 1 + (CLOSE_UP if index % 2 else 0) + PUSH_IN * clamp(lt / max(dur, 0.01))
+        zoom += PUNCH * (1 - ease(lt / 0.3))
+        dx = math.sin(t * 0.7) * 12
+        dy = 0.0
+        if self.beats and self.beats[index]["name"] in ("scared", "alone"):
+            dx += math.sin(t * 47) * 6
+            dy += math.cos(t * 53) * 5
+        ctx.translate(FOCUS[0] + dx, FOCUS[1] + dy)
+        ctx.scale(zoom, zoom)
+        ctx.translate(-FOCUS[0], -FOCUS[1])
 
     # helpers used by actions
     def look_at_each_other(self, amount=0.85):
