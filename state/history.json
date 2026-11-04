@@ -22,5 +22,13 @@
     "scene": "home",
     "voice": "af_heart",
     "title": "The single strongest predictor of divorce"
+  },
+  {
+    "date": "2026-11-04",
+    "fact": "hand-holding",
+    "format": "quiz",
+    "scene": "night",
+    "voice": "heart-nova",
+    "title": "Whose hand calms your brain the most?"
   }
 ]
