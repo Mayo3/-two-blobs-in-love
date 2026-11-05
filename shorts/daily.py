@@ -15,7 +15,7 @@ from .produce import ROOT, VOICES, produce
 
 HISTORY = os.path.join(ROOT, "state", "history.json")
 REUSE_AFTER_DAYS = 20  # a fact can come back, in a format not used for it yet, after this long
-RECENT_SCENES = 2  # a scene is not used again until this many videos later
+RECENT_SCENES = 6  # a scene sits out this many videos, leaving the writer a few that fit the story
 RECENT_FACTS = 4  # prefer a topic and researcher not seen in this many videos
 
 
