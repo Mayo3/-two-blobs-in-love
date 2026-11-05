@@ -38,5 +38,13 @@
     "scene": "lab",
     "voice": "heart-nova",
     "title": "Skip the small talk"
+  },
+  {
+    "date": "2026-11-05",
+    "fact": "good-news",
+    "format": "experiment",
+    "scene": "cafe",
+    "voice": "heart-nova",
+    "title": "The reaction that predicts if you'll last"
   }
 ]
