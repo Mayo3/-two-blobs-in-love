@@ -30,5 +30,13 @@
     "scene": "night",
     "voice": "heart-nova",
     "title": "Whose hand calms your brain the most?"
+  },
+  {
+    "date": "2026-11-05",
+    "fact": "36-questions",
+    "format": "story",
+    "scene": "lab",
+    "voice": "heart-nova",
+    "title": "Skip the small talk"
   }
 ]
