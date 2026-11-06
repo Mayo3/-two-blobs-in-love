@@ -54,5 +54,13 @@
     "scene": "kitchen",
     "voice": "heart-nova",
     "title": "Hangry spouses and voodoo dolls"
+  },
+  {
+    "date": "2026-11-06",
+    "fact": "perpetual",
+    "format": "experiment",
+    "scene": "park",
+    "voice": "heart-nova",
+    "title": "The fights you will never solve"
   }
 ]
