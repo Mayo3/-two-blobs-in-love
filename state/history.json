@@ -46,5 +46,13 @@
     "scene": "cafe",
     "voice": "heart-nova",
     "title": "The reaction that predicts if you'll last"
+  },
+  {
+    "date": "2026-11-06",
+    "fact": "hangry",
+    "format": "story",
+    "scene": "kitchen",
+    "voice": "heart-nova",
+    "title": "Hangry spouses and voodoo dolls"
   }
 ]
