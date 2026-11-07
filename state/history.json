@@ -62,5 +62,13 @@
     "scene": "park",
     "voice": "heart-nova",
     "title": "The fights you will never solve"
+  },
+  {
+    "date": "2026-11-07",
+    "fact": "faces-alike",
+    "format": "myth-vs-fact",
+    "scene": "autumn",
+    "voice": "heart-nova",
+    "title": "Do couples really start to look alike?"
   }
 ]
