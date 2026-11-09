@@ -78,5 +78,13 @@
     "scene": "home",
     "voice": "heart-nova",
     "title": "Tie wrists with your partner"
+  },
+  {
+    "date": "2026-11-09",
+    "fact": "eye-gaze",
+    "format": "quiz",
+    "scene": "night",
+    "voice": "heart-nova",
+    "title": "Can eye contact spark affection?"
   }
 ]
