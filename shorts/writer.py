@@ -9,12 +9,11 @@ from .cartoon.director import ACTIONS, describe_actions
 from .cartoon.scenes import Scene
 from .llm import chat_json
 from .produce import ROOT
-from .style import BANNED_PHRASES, MAX_HOOK_WORDS, MAX_SENTENCE_WORDS, MAX_WORDS, MIN_WORDS, check_script
+from .style import BANNED_PHRASES, MAX_HOOK_WORDS, MAX_SENTENCE_WORDS, MAX_WORDS, MIN_WORDS, STUDY_WORDS, check_script
 
 FORMATS = {
-    "story": "Tell how the study was done, like a short story, then land the finding and what it means for the viewer.",
+    "reveal": "Ask the question, then give the finding straight as a plain fact, then the detail that makes it surprising.",
     "myth-vs-fact": "Open with the popular belief stated confidently, then overturn it with the finding.",
-    "experiment": "Walk through the experiment step by step (what researchers did, what happened), then the twist.",
     "try-this": "Turn the finding into one small thing the viewer can try with their partner today.",
     "quiz": "Open by making the viewer guess (e.g. which couples..., what happened when...), then reveal.",
 }
@@ -33,7 +32,10 @@ Light and curious beats heavy: playful questions about love get watched far long
 Hard rules:
 - Use ONLY the fact you are given. Every number you say must appear in the fact. No other statistics.
 - Never invent details about the study (no made-up participant counts, places, or quotes).
-- {MIN_WORDS}-{MAX_WORDS} words in total, 5-8 lines. Short is the point: every line must earn its place. Each line is one or two short spoken sentences, at most {MAX_SENTENCE_WORDS} words per sentence.
+- Straight facts: say what was found, as a fact about people like the viewer. Never name researchers, scientists,
+  universities or journals, never say a year, and don't narrate how a study was run. The source goes in a comment.
+  Keep it true: if only women, or only married couples, were studied, say so in a few words.
+- {MIN_WORDS}-{MAX_WORDS} words in total, 4-7 lines. Short is the point: every line must earn its place. Each line is one or two short spoken sentences, at most {MAX_SENTENCE_WORDS} words per sentence.
 - Line 1 is the hook, at most {MAX_HOOK_WORDS} words. It is shown on screen while it is spoken, alone, so it must work on its own and make someone stop scrolling.
   Open a question the video then answers, so viewers stay to find out: a yes-or-no question about something people
   believe or wonder about ("Do couples really start to *look alike*?", "Can eye contact make you *fall* for someone?"),
@@ -55,7 +57,8 @@ Reply with JSON only:
 {{"title": "...", "scene": "...", "palette": "...", "lines": ["..."], "beats": ["action" or ["action", "action"], ...], "caption": "..."}}
 - "title": under 40 characters, a punchy name for the video (used in notifications and the history).
 - "beats" has exactly one entry per line.
-- "caption": the TikTok caption, one or two natural sentences (under 150 characters), no hashtags.
+- "caption": one short natural sentence (under 120 characters) that teases the fact without giving the answer away, no hashtags.
+  In the TikTok caption it comes right after your closing question, so don't repeat the question.
 """
 
 
@@ -70,8 +73,8 @@ def examples():
 def validate(script, fact, scenes=Scene.kinds):
     problems = check_script(script, fact)
     lines, beats = script.get("lines", []), script.get("beats", [])
-    if not 5 <= len(lines) <= 8:
-        problems.append(f"{len(lines)} lines (want 5-8)")
+    if not 4 <= len(lines) <= 7:
+        problems.append(f"{len(lines)} lines (want 4-7)")
     if len(beats) != len(lines):
         problems.append(f"{len(beats)} beats for {len(lines)} lines")
     for b in beats:
@@ -86,13 +89,15 @@ def validate(script, fact, scenes=Scene.kinds):
         problems.append("title missing or too long")
     if "#" in script.get("caption", ""):
         problems.append("caption contains hashtags")
+    if any(w in script.get("caption", "").lower() for w in STUDY_WORDS):
+        problems.append("caption mentions who did the study; keep it a straight fact")
     return problems
 
 
 def write_script(fact, fmt, scenes=Scene.kinds, tries=3):
     """Return a validated script dict, or raise after `tries` failed attempts."""
     user = (
-        f"Fact: {fact['claim']}\nSource: {fact['source']}\n\n"
+        f"Fact: {fact['claim']}\n\n"
         f"Format: {fmt} — {FORMATS[fmt]}\n\n"
         f"Scene: pick the one of these that fits the story best: {', '.join(scenes)}.\n\n"
         f"{examples()}\n\nWrite the new script."

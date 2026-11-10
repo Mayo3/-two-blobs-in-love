@@ -1,5 +1,5 @@
 """Builds an .ass subtitle file: word-by-word captions plus the fixed brand layout
-(series label at the top, source citation at the bottom).
+(series label at the top). The source citation goes in a comment under the post, not the video.
 """
 import re
 
@@ -182,7 +182,7 @@ def headlines(tokens, title, duration):
     return [it for it in items if it["end"] - it["start"] > 0.3]
 
 
-def build_ass(tokens, duration, palette, source, series_label, title="", big_text=False, hook_end=None):
+def build_ass(tokens, duration, palette, series_label, title="", big_text=False, hook_end=None):
     """big_text: title, then every *emphasis* phrase in big letters. hook_end: the spoken
     first line sits in the cloud until this time and is left out of the captions, so the
     opening seconds carry one message that is read and heard at once."""
@@ -213,9 +213,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     ev = []
     ev.append(f"Dialogue: 1,{ts(0)},{ts(duration)},Label,,0,0,0,,{{\\fad(400,0)}}{esc(series_label)}")
     heads = headlines(tokens, title, duration) if big_text else []
-    source_at = hook_end if hook_end else 1.0  # don't clutter the hook
-    ev.append(f"Dialogue: 1,{ts(source_at)},{ts(duration)},Source,,0,0,0,,{{\\fad(600,0)}}Source: {esc(source)}")
-
     anim = "\\fad(250,200)\\fscx92\\fscy92\\t(0,220,\\fscx100\\fscy100)"
     for it in heads:
         style = "Title" if it["title"] else "Headline"

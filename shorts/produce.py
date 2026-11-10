@@ -31,7 +31,7 @@ def produce(script, work, out_path, voice, style="cartoon"):
     lines = line_times(tokens, len(script["lines"]), duration)
     hook_end = lines[0][1]  # the hook stays up while line 1 is spoken
     with open(os.path.join(work, "captions.ass"), "w", encoding="utf-8") as f:
-        f.write(build_ass(tokens, duration, script["palette"], fact["source"], CHANNEL, script["title"], hook_end=hook_end))
+        f.write(build_ass(tokens, duration, script["palette"], CHANNEL, script["title"], hook_end=hook_end))
     if style == "footage":
         from .footage import pick_clips
         clips = pick_clips(script["footage"], seed=os.path.basename(out_path))

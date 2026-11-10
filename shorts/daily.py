@@ -76,7 +76,14 @@ def scene_options(history):
 
 
 def tiktok_caption(script, fact):
-    return f"{script['caption']} (Source: {fact['source']}) {HASHTAGS}"
+    """Leads with the closing question: few viewers reach the end of the video, but everyone sees the caption."""
+    question = script["lines"][-1].replace("*", "").strip()
+    return f"{question} {script['caption']} {HASHTAGS}"
+
+
+def source_comment(fact):
+    """Posted as the first comment (and pinned), so the video and caption stay straight facts."""
+    return f"Source: {fact['source']}"
 
 
 def main():
@@ -90,7 +97,7 @@ def main():
     if args.script:
         script = json.load(open(args.script, encoding="utf-8"))
         fact = FACT_BY_ID[script["fact"]]
-        script.setdefault("format", "story")
+        script.setdefault("format", "reveal")
         script.setdefault("caption", script["title"])
     else:
         from .writer import write_script
@@ -108,7 +115,7 @@ def main():
 
     meta = {
         "date": today.isoformat(), "fact": fact["id"], "format": script["format"], "scene": script["scene"], "voice": voice,
-        "title": script["title"], "caption": tiktok_caption(script, fact), "source": fact["source"],
+        "title": script["title"], "caption": tiktok_caption(script, fact), "comment": source_comment(fact), "source": fact["source"],
         "video": video, "duration": round(duration, 1), "script": script,
     }
     meta_path = os.path.join(out_dir, "meta.json")
@@ -116,7 +123,7 @@ def main():
         json.dump(meta, f, indent=2, ensure_ascii=False)
     history.append({k: meta[k] for k in ("date", "fact", "format", "scene", "voice", "title")})
     save_history(history)
-    print(f"{video}  ({duration:.1f}s)\n{meta['caption']}")
+    print(f"{video}  ({duration:.1f}s)\n{meta['caption']}\n{meta['comment']}")
 
     gh_out = os.environ.get("GITHUB_OUTPUT")
     if gh_out:

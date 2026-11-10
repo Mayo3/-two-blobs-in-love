@@ -1,70 +1,66 @@
 [
   {
     "fact": "bids",
-    "format": "story-number",
+    "format": "quiz",
     "voice": "heart-nova",
     "palette": "plum",
     "title": "The 86% habit of couples who last",
     "lines": [
-      "Can one tiny habit predict if a couple *lasts*?",
-      "Psychologist John Gottman watched newlyweds spend a weekend in a lab apartment.",
-      "One partner says, *look at that bird.* That's a bid for attention.",
-      "Couples still together years later turned toward those bids *86 percent* of the time.",
+      "Can a *bird* tell if you two will last?",
+      "Your partner points and says, *look at that bird.*",
+      "That's a bid for attention.",
+      "Couples who lasted turned toward bids *86 percent* of the time.",
       "Couples who split up? *33 percent.*",
-      "Be honest: when they point at the bird, do you look up?"
+      "So be honest: do you look up?"
     ],
     "scene": "home",
     "beats": [
       "turn_toward",
-      "watched",
       "point_bird",
+      "bid",
       "turn_toward",
       "ignore",
       "ask_viewer"
     ],
     "footage": [
       "newlywed couple happy",
-      "couple apartment relaxing",
       "bird flying",
       "couple talking kitchen",
       "couple smiling together",
-      "woman using phone bored"
+      "woman using phone bored",
+      "couple apartment relaxing"
     ]
   },
   {
     "fact": "hand-holding",
-    "format": "experiment",
+    "format": "reveal",
     "voice": "heart-nova",
     "palette": "night",
     "title": "What holding hands does to your brain",
     "lines": [
       "Whose hand calms your brain *the most*?",
-      "Researchers warned married women that a small shock might come.",
-      "No hand, a stranger's hand, or their *husband's* hand.",
-      "Their husband's hand calmed the brain *the most*.",
+      "Expecting a shock, your brain braces for *fear*.",
+      "Holding a stranger's hand? It still braces.",
+      "For married women, their husband's hand calmed it *the most*.",
       "And the happier the couple, the *calmer* it stayed.",
-      "So next time you're scared: their hand, or yours?"
+      "Scared? Their hand, or yours?"
     ],
     "scene": "lab",
     "beats": [
       "hold_hands",
       "scared",
-      [
-        "alone",
-        "stranger",
-        "hold_hands"
-      ],
+      "stranger",
       "calm",
       "calm",
       "ask_viewer"
     ],
     "footage": [
       "couple holding hands",
-      "mri scanner hospital",
+      "storm lightning",
+      "handshake",
       "hands touching",
-      "couple holding hands walking",
       "happy elderly couple",
-      "handshake"
+      "couple holding hands walking"
     ]
   },
   {
@@ -75,34 +71,34 @@
     "title": "Do couples really start to look alike?",
     "lines": [
       "Do couples really start to *look alike*?",
-      "A famous 1987 study said yes. So Stanford researchers checked again.",
-      "They compared photos of *517 couples*, taken 20 to 69 years apart.",
-      "Couples did *not* grow more alike over time.",
+      "A famous study said yes.",
+      "Photos of *517 couples*, 20 to 69 years apart, say no.",
+      "They did *not* grow more alike over time.",
       "They already looked similar *from the very start*.",
-      "Be honest: do you and your partner look alike?"
+      "So, do you two look alike?"
     ],
     "scene": "park",
     "beats": [
       "twin",
       "think",
       [
-        "photo:1987",
-        "old"
+        "photo:then",
+        "compare"
       ],
-      "compare",
       [
-        "unmatch",
-        "young"
+        "old",
+        "unmatch"
       ],
+      "young",
       "ask_viewer"
     ],
     "footage": [
       "elderly couple",
-      "old photographs",
       "vintage photo album",
-      "face recognition",
+      "old photographs",
       "old couple laughing",
-      "young couple"
+      "young couple",
+      "face recognition"
     ]
   }
 ]

@@ -15,9 +15,11 @@ BANNED_PHRASES = [
     "crucial", "vital", "moreover", "furthermore", "additionally", "ultimately",
     "true love", "soulmate", "relationship goals", "red flag", "green flag",
 ]
+# The people and places behind a study; the video states the finding, the comment names the source.
+STUDY_WORDS = ["researcher", "scientist", "psychologist", "professor", "university", "journal"]
 
 # Things a good script must have.
-MIN_WORDS, MAX_WORDS = 45, 75           # about 15-28 seconds: short videos get watched to the end
+MIN_WORDS, MAX_WORDS = 30, 48           # about 14-20 seconds at the calm narration pace (most viewers left within 5s of 21-36s videos)
 MAX_SENTENCE_WORDS = 22                 # spoken sentences stay short
 MAX_HOOK_WORDS = 10                     # the first line has about 2 seconds to stop the scroll, and fits the cloud
 
@@ -53,9 +55,14 @@ def check_script(script, fact):
         problems.append("last line is not a question for the viewer")
     if first.rstrip().endswith("?") and first.lower().startswith(("have you", "do you", "are you", "ever wonder")):
         problems.append("lazy question hook")
-    # Every number in the script must appear in the fact (no invented stats).
+    # Every number in the script must appear in the fact (no invented stats, no citation years).
     fact_text = fact["claim"].lower()
     for num in re.findall(r"\d+(?:\.\d+)?", text):
-        if num not in fact_text and num not in fact["source"]:
-            problems.append(f"number '{num}' is not in the source fact")
+        if num not in fact_text:
+            problems.append(f"number '{num}' is not in the fact")
+    # Straight facts: who ran the study goes in the comment, not the video.
+    surname = fact["source"].split(",")[0].split("&")[0].split(" et al")[0].strip().lower()
+    for word in (*STUDY_WORDS, surname):
+        if re.search(r"\b" + re.escape(word), low):
+            problems.append(f"mentions '{word}': state the finding itself, the source goes in the comment")
     return problems
