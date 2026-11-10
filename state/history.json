@@ -86,5 +86,13 @@
     "scene": "night",
     "voice": "heart-nova",
     "title": "Can eye contact spark affection?"
+  },
+  {
+    "date": "2026-11-10",
+    "fact": "sleep-fights",
+    "format": "story",
+    "scene": "lab",
+    "voice": "heart-nova",
+    "title": "Does bad sleep ruin your *arguments*?"
   }
 ]
