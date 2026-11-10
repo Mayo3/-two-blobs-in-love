@@ -25,11 +25,20 @@ Each video is narrated over a cartoon of two cute blob characters who act out ev
 Voice: a warm, clever friend telling you something surprising over coffee. Plain spoken English.
 Specific and concrete. A little playful. Never preachy, never salesy, never generic.
 
+Audience: mostly 18 to 34, dating or in their first serious relationships. Talk to them about "you two"
+and "your partner". Don't assume they are married: say "married couples", "newlyweds", "husband" or
+"divorce" only when describing who was studied, then bring it straight back to the viewer.
+Light and curious beats heavy: playful questions about love get watched far longer than warnings about breakups.
+
 Hard rules:
 - Use ONLY the fact you are given. Every number you say must appear in the fact. No other statistics.
 - Never invent details about the study (no made-up participant counts, places, or quotes).
 - {MIN_WORDS}-{MAX_WORDS} words in total, 5-8 lines. Short is the point: every line must earn its place. Each line is one or two short spoken sentences, at most {MAX_SENTENCE_WORDS} words per sentence.
-- Line 1 is the hook, at most {MAX_HOOK_WORDS} words. It must make someone stop scrolling: a surprising claim or concrete image, not a question like "Have you ever...".
+- Line 1 is the hook, at most {MAX_HOOK_WORDS} words. It is shown on screen while it is spoken, alone, so it must work on its own and make someone stop scrolling.
+  Open a question the video then answers, so viewers stay to find out: a yes-or-no question about something people
+  believe or wonder about ("Do couples really start to *look alike*?", "Can eye contact make you *fall* for someone?"),
+  or a belief stated as fact that the video will overturn. Never give the answer away in line 1.
+  Not a lazy question like "Have you ever..." or "Do you...".
 - Write numbers as digits and spell out "percent" (e.g. "86 percent") so the narrator reads them right.
 - Mark 1-4 key words or numbers with *asterisks* (they get highlighted).
 - The last line is a question the viewer can answer in a word or two (yes or no, this or that, A or B), so they reply in the comments. Never "follow for more" or "comment below".
@@ -44,7 +53,7 @@ Palettes (caption highlight colours): {", ".join(PALETTES)}.
 
 Reply with JSON only:
 {{"title": "...", "scene": "...", "palette": "...", "lines": ["..."], "beats": ["action" or ["action", "action"], ...], "caption": "..."}}
-- "title": under 40 characters, the hook in other words. It is shown in big letters for the first seconds, so make it punchy.
+- "title": under 40 characters, a punchy name for the video (used in notifications and the history).
 - "beats" has exactly one entry per line.
 - "caption": the TikTok caption, one or two natural sentences (under 150 characters), no hashtags.
 """

@@ -1,7 +1,7 @@
 """Script → finished video. Shared by the sample renderer and the daily job."""
 import os
 
-from .captions import HOOK_SECONDS, HOOK_Y, align, build_ass, line_times, tokenize
+from .captions import HOOK_Y, align, build_ass, hook_text, line_times, tokenize
 from .cartoon.director import Animator, timed_beats
 from .facts import FACT_BY_ID
 from .render import audio_duration, render_cartoon, render_footage
@@ -28,14 +28,15 @@ def produce(script, work, out_path, voice, style="cartoon"):
     words = synthesize(spoken, voice, os.path.join(work, audio))
     duration = audio_duration(os.path.join(work, audio)) + 0.6
     tokens = align(tokenize(script["lines"]), words)
-    with open(os.path.join(work, "captions.ass"), "w", encoding="utf-8") as f:
-        f.write(build_ass(tokens, duration, script["palette"], fact["source"], CHANNEL, script["title"], hook=True))
     lines = line_times(tokens, len(script["lines"]), duration)
+    hook_end = lines[0][1]  # the hook stays up while line 1 is spoken
+    with open(os.path.join(work, "captions.ass"), "w", encoding="utf-8") as f:
+        f.write(build_ass(tokens, duration, script["palette"], fact["source"], CHANNEL, script["title"], hook_end=hook_end))
     if style == "footage":
         from .footage import pick_clips
         clips = pick_clips(script["footage"], seed=os.path.basename(out_path))
         render_footage(work, audio, "captions.ass", out_path, script["palette"], duration, FONTS, clips, lines)
     else:
-        animator = Animator(script["scene"], timed_beats(script["beats"], lines), tokens, hook=(HOOK_SECONDS, HOOK_Y))
+        animator = Animator(script["scene"], timed_beats(script["beats"], lines), tokens, hook=(hook_end, HOOK_Y, hook_text(tokens)[1]))
         render_cartoon(work, audio, "captions.ass", out_path, script["palette"], duration, FONTS, animator)
     return duration

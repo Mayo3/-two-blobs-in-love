@@ -24,6 +24,7 @@ PUSH_IN = 0.025  # slow zoom over the length of a beat
 GLIDE = 2.5  # how quickly the camera eases to a new framing
 BOUNCE = 0.28  # seconds of squash-and-stretch when a beat starts
 HOOK_CLOUD = 232  # size of the cloud behind the hook title
+OPENING_HOP = 0.7  # seconds both blobs hop at the start
 WORD_BOB = 0.03  # squash on every spoken word
 EMPH_STRETCH = 0.09  # stretch up on *highlighted* words
 
@@ -61,7 +62,7 @@ class Animator:
     def __init__(self, scene, beats, words=(), hook=None):
         self.scene = Scene(scene)
         self.beats = beats
-        self.hook = hook  # (seconds, centre y) of the cloud behind the hook title, or None
+        self.hook = hook  # (seconds, centre y, text lines) of the cloud behind the hook, or None
         self.words = [w for w in words if w.get("start") is not None]  # caption tokens with timings
         self.A = Blob("A", "ff9a8b", "sprout", AX, GROUND, 330, +1, seed=1)
         self.B = Blob("B", "b9a3f5", "bow", BX, GROUND, 312, -1, seed=2)
@@ -93,6 +94,9 @@ class Animator:
             for blob in (A, B):
                 blob.tgt["squash"] += 0.07 * math.sin(math.pi * lt / BOUNCE)
         self.move_to_speech(t)
+        for blob, start in ((A, 0.0), (B, 0.12)):  # a quick double hop so the very first frames move
+            if start <= t < start + OPENING_HOP:
+                blob.hop = 1.0
         for blob in (A, B, S):
             blob.update(dt, t)
         self.monitor += (self.monitor_t - self.monitor) * (1 - math.exp(-3 * dt))
@@ -116,13 +120,13 @@ class Animator:
         if self.hook and t < self.hook[0]:
             self.hook_cloud(ctx, t, *self.hook)
 
-    def hook_cloud(self, ctx, t, seconds, y):
-        """Puffy white cloud the hook title sits in: pops in, floats, fades as the title goes."""
+    def hook_cloud(self, ctx, t, seconds, y, rows=3):
+        """Puffy white cloud the hook sits in: pops in, floats, fades as the hook ends."""
         pop = 0.75 + 0.25 * ease_out_back(min(1, t * 3.5))
         fade = clamp((seconds - t) / 0.25)
         ctx.save()
         ctx.translate(W / 2, y + 14 + math.sin(t * 2.2) * 6)  # the bumps sit high, so centre the body on the text
-        ctx.scale(pop * 1.3, pop)  # wider than tall, room for three lines of text
+        ctx.scale(pop * 1.3, pop * (1 + 0.3 * max(0, rows - 3)))  # wider than tall; taller for a 4th line
         ctx.push_group()
         puff(ctx, 0, 0, HOOK_CLOUD, hexc("fffaf7"))
         ctx.pop_group_to_source()

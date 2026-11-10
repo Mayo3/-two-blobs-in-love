@@ -8,8 +8,9 @@ W, H = 1080, 1920
 # the For You tabs the top ~250px. One caption line sits just above the bottom overlay.
 CAPTION_Y = 1440
 HEADLINE_Y = 540
-HOOK_SECONDS = 2.8  # how long the big hook title stays up
-HOOK_Y = 570  # centre of the hook title (and the cloud behind it)
+HOOK_Y = 570  # centre of the hook (spoken line 1, shown in a cloud while it is said)
+HOOK_WRAP = 16  # characters per line inside the cloud
+HOOK_EMPH = "E8436F"  # *highlighted* hook words, readable on the white cloud
 MAX_WORDS_PER_CHUNK = 3
 MAX_CHARS_PER_CHUNK = 15  # keeps the line clear of TikTok's buttons on the right
 
@@ -135,6 +136,24 @@ def esc(text):
     return text.replace("\\", "\\\\").replace("{", "(").replace("}", ")")
 
 
+def hook_text(tokens):
+    """The spoken hook (line 1) for the cloud, *highlighted* words in pink.
+    Returns (ass text, number of text lines)."""
+    words = [t for t in tokens if t["line"] == 0]
+    rows = wrap(" ".join(esc(t["text"]) for t in words), HOOK_WRAP).split("\\N")
+    out, i = [], 0
+    for row in rows:
+        parts = []
+        for _ in row.split():
+            t = words[i]
+            i += 1
+            parts.append(f"{{\\c{ass_color(HOOK_EMPH)}}}{esc(t['text'])}{{\\c{ass_color('3b2340')}}}" if t["emph"] else esc(t["text"]))
+        out.append(" ".join(parts))
+    widest = max(len(r) for r in rows)
+    shrink = f"{{\\fs{int(76 * HOOK_WRAP / widest)}}}" if widest > HOOK_WRAP else ""  # a long word must stay inside the cloud
+    return shrink + "\\N".join(out), len(rows)
+
+
 def headlines(tokens, title, duration):
     """Big serif text above the captions: the title first, then each *emphasis* phrase,
     each held until the next one appears (at most ~6s)."""
@@ -163,9 +182,10 @@ def headlines(tokens, title, duration):
     return [it for it in items if it["end"] - it["start"] > 0.3]
 
 
-def build_ass(tokens, duration, palette, source, series_label, title="", big_text=False, hook=False):
-    """big_text: title, then every *emphasis* phrase in big letters. hook: only the title,
-    big, for the first seconds (most people start watching muted)."""
+def build_ass(tokens, duration, palette, source, series_label, title="", big_text=False, hook_end=None):
+    """big_text: title, then every *emphasis* phrase in big letters. hook_end: the spoken
+    first line sits in the cloud until this time and is left out of the captions, so the
+    opening seconds carry one message that is read and heard at once."""
     pal = PALETTES[palette]
     white = ass_color("FFFFFF")
     accent = ass_color(pal["accent"])
@@ -193,17 +213,17 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     ev = []
     ev.append(f"Dialogue: 1,{ts(0)},{ts(duration)},Label,,0,0,0,,{{\\fad(400,0)}}{esc(series_label)}")
     heads = headlines(tokens, title, duration) if big_text else []
-    if hook and title:
-        # dark text inside a white cloud (drawn by the cartoon), readable on every scene and palette
-        heads = [{"start": 0.0, "end": min(HOOK_SECONDS, duration), "text": title, "title": True, "style": "Hook"}]
-    source_at = HOOK_SECONDS if hook else 1.0  # don't clutter the hook
+    source_at = hook_end if hook_end else 1.0  # don't clutter the hook
     ev.append(f"Dialogue: 1,{ts(source_at)},{ts(duration)},Source,,0,0,0,,{{\\fad(600,0)}}Source: {esc(source)}")
 
+    anim = "\\fad(250,200)\\fscx92\\fscy92\\t(0,220,\\fscx100\\fscy100)"
     for it in heads:
-        style = it.get("style") or ("Title" if it["title"] else "Headline")
-        anim = "\\fad(250,200)\\fscx92\\fscy92\\t(0,220,\\fscx100\\fscy100)"
-        y = HOOK_Y if style == "Hook" else HEADLINE_Y
-        ev.append(f"Dialogue: 2,{ts(it['start'])},{ts(it['end'])},{style},,0,0,0,,{{\\pos({W // 2},{y})\\q2{anim}}}{wrap(esc(it['text']), 14 if it['title'] else 12)}")
+        style = "Title" if it["title"] else "Headline"
+        ev.append(f"Dialogue: 2,{ts(it['start'])},{ts(it['end'])},{style},,0,0,0,,{{\\pos({W // 2},{HEADLINE_Y})\\q2{anim}}}{wrap(esc(it['text']), 14 if it['title'] else 12)}")
+    if hook_end:
+        # dark text inside a white cloud (drawn by the cartoon), readable on every scene and palette
+        ev.append(f"Dialogue: 2,{ts(0)},{ts(hook_end)},Hook,,0,0,0,,{{\\pos({W // 2},{HOOK_Y})\\q2{anim}}}{hook_text(tokens)[0]}")
+        tokens = [t for t in tokens if t["line"] > 0]
 
     chunks = chunk(tokens)
     for ci, ch in enumerate(chunks):

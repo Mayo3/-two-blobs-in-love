@@ -19,7 +19,7 @@ BANNED_PHRASES = [
 # Things a good script must have.
 MIN_WORDS, MAX_WORDS = 45, 75           # about 15-28 seconds: short videos get watched to the end
 MAX_SENTENCE_WORDS = 22                 # spoken sentences stay short
-MAX_HOOK_WORDS = 12                     # the first line has about 2 seconds to stop the scroll
+MAX_HOOK_WORDS = 10                     # the first line has about 2 seconds to stop the scroll, and fits the cloud
 
 
 def plain_text(lines):
