@@ -449,6 +449,140 @@ def _watched(an, lt, p, dur, arg):
     an.front.append(lambda ctx: P.security_camera(ctx, 880, 1160, lt))
 
 
+@action("kiss", "they lean in and kiss; a heart pops above them")
+def _kiss(an, lt, p, dur, arg):
+    A, B = an.A, an.B
+    near = ease(lt * 2.2)
+    A.tgt["x"], B.tgt["x"] = AX + 28 * near, BX - 24 * near
+    A.tgt["lean"], B.tgt["lean"] = 9 * near, -9 * near
+    A.tgt["blush"] = B.tgt["blush"] = 1.0
+    an.look_at_each_other(1.0)
+    A.eyes = B.eyes = "happy"
+    A.mouth = B.mouth = "open" if lt < 0.5 else "smile"
+    an.front.append(lambda ctx: P.heart_pop(ctx, lt - 0.5, 540, 1190, size=64))
+    an.front.append(lambda ctx: P.hearts_rising(ctx, lt - 0.9, 540, 1150, n=4, size=20))
+
+
+@action("sniff", "A holds up a worn T-shirt and sniffs it, scent wisps rising; B watches, amused (arg 'bad': A recoils)")
+def _sniff(an, lt, p, dur, arg):
+    A, B = an.A, an.B
+    A.tgt["arm_in"] = 118
+    A.tgt["look_x"], A.tgt["look_y"] = 0.9, -0.2
+    bad = arg == "bad" and p > 0.45
+    A.eyes = "wide" if bad else "happy"
+    A.mouth = "wobbly" if bad else "smile"
+    A.tgt["lean"] = -6 if bad else 5 * math.sin(lt * 5)
+    A.tgt["blush"] = 0.0 if bad else 0.9
+    B.tgt["look_x"] = -0.9
+    B.mouth = "grin"
+    tx = A.cur["x"] + 150
+    an.front.append(lambda ctx: P.tshirt(ctx, tx, 1420 + math.sin(lt * 5) * 6, 0.9))
+    an.front.append(lambda ctx: P.scent(ctx, lt, tx, 1350, color="b7c06a" if arg == "bad" else "9be3b0"))
+
+
+@action("texting", "both look down at their phones; message bubbles fly between them (arg 'heart': the messages are hearts)")
+def _texting(an, lt, p, dur, arg):
+    A, B = an.A, an.B
+    for b in (A, B):
+        b.tgt["look_x"], b.tgt["look_y"] = 0.25 * b.inner, 0.9
+        b.tgt["arm_in"] = 70
+    A.mouth = B.mouth = "smile"
+    ax, bx = A.cur["x"] + 125, B.cur["x"] - 125
+    an.front.append(lambda ctx: P.phone(ctx, ax, GROUND - 235, lt))
+    an.front.append(lambda ctx: P.phone(ctx, bx, GROUND - 235, lt + 0.4))
+    for k in range(4):  # bubbles pop up over the sender, drift to the middle and fade
+        age = lt - 0.25 - k * 0.75
+        if not 0 <= age < 1.5:
+            continue
+        mine = k % 2 == 0
+        x0 = A.cur["x"] if mine else B.cur["x"]
+        x = x0 + (540 - x0) * ease(age / 1.5) * 0.7
+        s = ease_out_back(min(1, age * 4)) * clamp((1.5 - age) * 4)
+        an.front.append(lambda ctx, x=x, s=s, mine=mine, age=age: P.message(ctx, x, 1250 - age * 60, s, mine, arg or "dots"))
+
+
+@action("heartbeat", "a heart beats on each of them, exactly in time, with a pulse line running between (hearts or bodies in sync)")
+def _heartbeat(an, lt, p, dur, arg):
+    A, B = an.A, an.B
+    beat = P.pulse(lt)
+    an.look_at_each_other(0.7)
+    A.eyes = B.eyes = "happy"
+    A.tgt["squash"] -= 0.035 * beat
+    B.tgt["squash"] -= 0.035 * beat
+    ax, bx = A.cur["x"], B.cur["x"]
+    an.back.append(lambda ctx: P.pulse_line(ctx, lt, 250, 830, 1235))
+    for x in (ax, bx):
+        an.front.append(lambda ctx, x=x: (P.heart(ctx, x, 1575, 30 * (1 + 0.45 * beat)), P.fill_stroke(ctx, P.PINK, width=5)))
+
+
+@action("date", "they sit at a little candle-lit table across from each other, a bit shy (a date, speed dating, dinner)")
+def _date(an, lt, p, dur, arg):
+    A, B = an.A, an.B
+    A.tgt["x"], B.tgt["x"] = 290, 790
+    an.look_at_each_other(0.9)
+    A.tgt["blush"] = B.tgt["blush"] = 0.9
+    A.mouth = "grin" if int(lt * 1.2) % 2 == 0 else "smile"
+    B.eyes = "happy" if int(lt * 1.2) % 2 else "open"
+    an.front.append(lambda ctx: P.date_table(ctx, 540, GROUND, lt))
+
+
+@action("laugh", "both crack up laughing, bouncing, with 'ha ha' floating up")
+def _laugh(an, lt, p, dur, arg):
+    for b in (an.A, an.B):
+        b.eyes = "happy"
+        b.mouth = "grin"
+        b.tgt["blush"] = 0.9
+        b.tgt["arm_out"] = 60 + 25 * math.sin(lt * 12)
+    an.A.tgt["squash"] += 0.05 * math.sin(lt * 14)
+    an.B.tgt["squash"] += 0.05 * math.sin(lt * 14 + 1.3)
+    an.look_at_each_other(0.6)
+    an.front.append(lambda ctx: P.floating_marks(ctx, lt, 540, 1210, "ha", "ffd166"))
+
+
+@action("ring", "a big diamond ring floats up between them, sparkling; both stare at it (weddings, engagement, cost)")
+def _ring(an, lt, p, dur, arg):
+    for b in (an.A, an.B):
+        b.tgt["look_x"], b.tgt["look_y"] = 0.5 * b.inner, -0.8
+        b.eyes = "wide"
+        b.mouth = "open"
+    an.back.append(lambda ctx: P.sparkles(ctx, lt, 540, 1180, spread=170))
+    an.front.append(lambda ctx: P.ring(ctx, lt, 540, 1185))
+
+
+@action("brain", "a glowing brain lights up above them; both look up at it (what happens in the brain, hormones)")
+def _brain(an, lt, p, dur, arg):
+    for b in (an.A, an.B):
+        b.tgt["look_x"], b.tgt["look_y"] = 0.4 * b.inner, -0.85
+        b.mouth = "open" if p < 0.5 else "smile"
+    an.back.append(lambda ctx: P.sparkles(ctx, lt, 540, 1170, spread=230))
+    an.front.append(lambda ctx: P.brain(ctx, lt, 540, 1175))
+
+
+@action("far_apart", "they stand far apart at opposite edges and wave; a dotted path with a little heart joins them (long distance, living near or far)")
+def _far_apart(an, lt, p, dur, arg):
+    A, B = an.A, an.B
+    A.tgt["x"], B.tgt["x"] = 270, 810  # as far as the frame shows them whole
+    an.look_at_each_other(1.0)
+    A.tgt["arm_in"] = 140 + 22 * math.sin(lt * 8)
+    B.tgt["arm_in"] = 140 + 22 * math.sin(lt * 8 + 1.5)
+    A.mouth = B.mouth = "smile"
+    if abs(A.cur["x"] - 270) < 40:
+        an.back.append(lambda ctx: P.dashed_arc(ctx, lt, 350, 730, 1290))
+
+
+@action("chat", "they talk: speech bubbles pop up over one, then the other (arg: a short word for the bubbles, like 'we' or '?')")
+def _chat(an, lt, p, dur, arg):
+    A, B = an.A, an.B
+    an.look_at_each_other(0.9)
+    turn = int(lt / 1.1) % 2
+    who, other = (A, B) if turn == 0 else (B, A)
+    who.tgt["arm_out"] = 80 + 25 * math.sin(lt * 7)
+    other.eyes = "happy" if (lt % 1.1) > 0.6 else "open"
+    wx = who.cur["x"]
+    blt = lt % 1.1
+    an.front.append(lambda ctx: P.bubble(ctx, blt, wx, 1175, "speech", arg or "dots", tail_to=(wx, 1320)))
+
+
 def render_frames(animator, duration, fps, write):
     surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
     ctx = cairo.Context(surf)

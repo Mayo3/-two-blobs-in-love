@@ -58,6 +58,8 @@ Hard rules:
   "Does bad sleep ruin your arguments?" (of course it does) loses to "Is tomorrow's fight decided *tonight*?".
   Put the oddest concrete thing in the fact into the hook (a bird, a voodoo doll, a sweaty T-shirt).
 - Write numbers as digits and spell out "percent" (e.g. "86 percent") so the narrator reads them right.
+- When a line is about a word itself, put that word in double quotes, or it reads like a typo on screen:
+  Can the word "the" predict your future? Couples who say "we" more.
 - Mark 1-4 key words or numbers with *asterisks* (they get highlighted).
 - The last line is said to the viewer, not to each other, with no names in it: a question the viewer can answer in a word or two (yes or no, this or that, A or B), so they reply in the comments. Never "follow for more" or "comment below".
   At most {MAX_HOOK_WORDS} words: it is shown whole on screen, like the hook. Best is one that splits people or makes them
@@ -117,6 +119,10 @@ def validate(script, fact, scenes=Scene.kinds):
         problems.append(f"last line longer than {MAX_HOOK_WORDS} words")
     caption = script.get("caption", "").lower()
     problems += [f"caption has banned phrase: '{p}'" for p in BANNED_PHRASES if p in caption]
+    for line in lines:
+        m = re.search(r"\bthe word (?![\"“'‘]|\*[\"“'‘])\*?(\w+)", line, re.I)
+        if m:
+            problems.append(f'put the word in double quotes: the word "{m.group(1)}"')
     if not script.get("title") or len(script["title"]) > 45:
         problems.append("title missing or too long")
     if "#" in script.get("caption", ""):

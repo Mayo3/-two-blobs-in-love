@@ -245,3 +245,178 @@ def flash(ctx, lt, w, h):
         ctx.set_source_rgba(1, 1, 1, a)
         ctx.rectangle(0, 0, w, h)
         ctx.fill()
+
+
+def tshirt(ctx, x, y, s=1.0, color="f6f1ea"):
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(s, s)
+    ctx.new_path()
+    for px, py in ((-34, -52), (-78, -30), (-62, 4), (-42, -6), (-42, 58), (42, 58), (42, -6), (62, 4), (78, -30), (34, -52)):
+        ctx.line_to(px, py)
+    ctx.curve_to(20, -36, -20, -36, -34, -52)
+    ctx.close_path()
+    fill_stroke(ctx, hexc(color), width=5)
+    ctx.restore()
+
+
+def scent(ctx, lt, x, y, color="9be3b0", n=3):
+    """Wavy wisps drifting up from (x, y)."""
+    ctx.set_line_width(7)
+    ctx.set_line_cap(1)
+    for k in range(n):
+        age = (lt * 0.8 + k / n) % 1.0
+        ox = x + (k - (n - 1) / 2) * 34
+        ctx.new_path()
+        for i in range(9):
+            yy = y - age * 150 - i * 9
+            ctx.line_to(ox + math.sin(i * 0.9 + lt * 4 + k) * 10, yy)
+        ctx.set_source_rgba(*hexc(color)[:3], 0.9 * math.sin(math.pi * age))
+        ctx.stroke()
+    ctx.set_line_cap(0)
+
+
+def message(ctx, x, y, s, mine, content="dots"):
+    """A chat bubble the size of a thumb: `mine` picks the side its tail is on and its colour."""
+    if s <= 0.01:
+        return
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(s, s)
+    rrect(ctx, -50, -30, 100, 60, 26)
+    ctx.move_to(30 if mine else -30, 26)
+    ctx.line_to(46 if mine else -46, 46)
+    ctx.line_to(12 if mine else -12, 28)
+    fill_stroke(ctx, hexc("8fd3ff") if mine else WHITE, width=5)
+    if content == "heart":
+        heart(ctx, 0, 3, 17)
+        fill_stroke(ctx, PINK, width=4)
+    else:
+        for i in range(3):
+            ellipse(ctx, -22 + i * 22, 0, 6, 6)
+            ctx.set_source_rgba(*OUTLINE)
+            ctx.fill()
+    ctx.restore()
+
+
+def pulse(lt, rate=1.15):
+    """0..1 double thump of a heartbeat."""
+    ph = (lt * rate) % 1.0
+    return max(0.0, math.sin(ph * math.pi * 6)) * (1 if ph < 0.34 else 0) * (1 - ph)
+
+
+def pulse_line(ctx, lt, x0, x1, y, color="ff5d8f"):
+    """A heart-monitor line that draws itself from x0 to x1 over and over."""
+    head = (lt * 0.9) % 1.3
+    ctx.set_line_width(8)
+    ctx.set_line_cap(1)
+    ctx.set_line_join(1)
+    ctx.new_path()
+    n = 60
+    for i in range(n + 1):
+        f = i / n
+        if f > head:
+            break
+        ph = (f * 3) % 1.0
+        dy = -70 if 0.42 < ph < 0.5 else 46 if 0.5 <= ph < 0.58 else -18 if 0.58 <= ph < 0.64 else 0
+        ctx.line_to(x0 + (x1 - x0) * f, y + dy)
+    ctx.set_source_rgba(*hexc(color))
+    ctx.stroke()
+    ctx.set_line_cap(0)
+    ctx.set_line_join(0)
+
+
+def date_table(ctx, x, ground, t):
+    """A little round table with a cloth and a candle."""
+    rrect(ctx, x - 10, ground - 150, 20, 150, 6)
+    fill_stroke(ctx, hexc("8a5a44"), width=5)
+    ellipse(ctx, x, ground - 4, 58, 12)
+    fill_stroke(ctx, hexc("8a5a44"), width=5)
+    ellipse(ctx, x, ground - 156, 120, 26)
+    fill_stroke(ctx, hexc("fff4e6"), width=6)
+    rrect(ctx, x - 9, ground - 232, 18, 70, 5)
+    fill_stroke(ctx, hexc("ffe9a8"), width=5)
+    f = 1 + 0.12 * math.sin(t * 13) + 0.08 * math.sin(t * 7.3)
+    ctx.set_source_rgba(1, 0.75, 0.3, 0.25)
+    ellipse(ctx, x, ground - 256, 46 * f, 46 * f)
+    ctx.fill()
+    ctx.new_path()
+    ctx.move_to(x, ground - 232)
+    ctx.curve_to(x - 20 * f, ground - 250, x - 6, ground - 272, x + 2 * math.sin(t * 9), ground - 232 - 54 * f)
+    ctx.curve_to(x + 8, ground - 270, x + 20 * f, ground - 250, x, ground - 232)
+    fill_stroke(ctx, hexc("ffb347"), width=4)
+
+
+def ring(ctx, lt, x, y):
+    s = ease_out_back(min(1, lt * 2.4))
+    if s <= 0.01:
+        return
+    ctx.save()
+    ctx.translate(x, y + math.sin(lt * 2.4) * 8)
+    ctx.scale(s, s)
+    ctx.new_path()
+    ctx.arc(0, 30, 52, 0, 2 * math.pi)
+    ctx.set_source_rgba(*OUTLINE)
+    ctx.set_line_width(30)
+    ctx.stroke_preserve()
+    ctx.set_source_rgba(*hexc("ffd166"))
+    ctx.set_line_width(18)
+    ctx.stroke()
+    ctx.new_path()
+    for px, py in ((-44, -52), (-24, -80), (24, -80), (44, -52), (0, -8)):
+        ctx.line_to(px, py)
+    ctx.close_path()
+    fill_stroke(ctx, hexc("bfefff"), width=6)
+    ctx.move_to(-44, -52)
+    ctx.line_to(44, -52)
+    ctx.set_source_rgba(*OUTLINE)
+    ctx.set_line_width(4)
+    ctx.stroke()
+    ctx.restore()
+
+
+def brain(ctx, lt, x, y):
+    s = ease_out_back(min(1, lt * 2.4)) * (1 + 0.04 * math.sin(lt * 6))
+    if s <= 0.01:
+        return
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(s, s)
+    glow = 0.5 + 0.5 * math.sin(lt * 5)
+    ctx.set_source_rgba(1, 0.85, 0.4, 0.18 + 0.22 * glow)
+    ellipse(ctx, 0, 0, 150, 120)
+    ctx.fill()
+    puff(ctx, 0, 0, 78, hexc("ffb3c7"))
+    ctx.set_source_rgba(*hexc("e0708f"))
+    ctx.set_line_width(7)
+    ctx.set_line_cap(1)
+    ctx.move_to(0, -52)
+    ctx.curve_to(-14, -20, 14, 0, 0, 44)
+    ctx.stroke()
+    for sx in (-1, 1):
+        ctx.move_to(sx * 20, -24)
+        ctx.curve_to(sx * 46, -40, sx * 56, -6, sx * 34, 6)
+        ctx.stroke()
+        ctx.move_to(sx * 22, 26)
+        ctx.curve_to(sx * 44, 14, sx * 62, 30, sx * 50, 40)
+        ctx.stroke()
+    ctx.set_line_cap(0)
+    ctx.restore()
+
+
+def dashed_arc(ctx, lt, x0, x1, y, rise=150):
+    """A dashed path between two far-apart points, with a small heart travelling along it."""
+    ctx.set_source_rgba(1, 1, 1, 0.85)
+    ctx.set_line_width(7)
+    ctx.set_line_cap(1)
+    ctx.set_dash([4, 26], -lt * 40)
+    ctx.move_to(x0, y)
+    ctx.curve_to(x0 + (x1 - x0) * 0.25, y - rise, x0 + (x1 - x0) * 0.75, y - rise, x1, y)
+    ctx.stroke()
+    ctx.set_dash([])
+    ctx.set_line_cap(0)
+    f = (lt * 0.45) % 1.0
+    hx = x0 + (x1 - x0) * f
+    hy = y - rise * 3 * f * (1 - f)
+    heart(ctx, hx, hy, 24)
+    fill_stroke(ctx, PINK, width=5)
