@@ -41,9 +41,14 @@ Hard rules:
   believe or wonder about ("Do couples really start to *look alike*?", "Can eye contact make you *fall* for someone?"),
   or a belief stated as fact that the video will overturn. Never give the answer away in line 1.
   Not a lazy question like "Have you ever..." or "Do you...".
+  The viewer must not be able to guess the answer. If the honest answer is an obvious yes, the hook is dead:
+  "Does bad sleep ruin your arguments?" (of course it does) loses to "Is tomorrow's fight decided *tonight*?".
+  Put the oddest concrete thing in the fact into the hook (a bird, a voodoo doll, a sweaty T-shirt).
 - Write numbers as digits and spell out "percent" (e.g. "86 percent") so the narrator reads them right.
 - Mark 1-4 key words or numbers with *asterisks* (they get highlighted).
 - The last line is a question the viewer can answer in a word or two (yes or no, this or that, A or B), so they reply in the comments. Never "follow for more" or "comment below".
+  At most {MAX_HOOK_WORDS} words: it is shown whole on screen, like the hook. Best is one that splits people or makes them
+  tell on themselves or their partner ("Who falls asleep first, you or them?"), not one everybody answers the same way.
 - At most one exclamation mark. No emojis. No hashtags in the script.
 - Never use these words or phrases: {", ".join(BANNED_PHRASES)}.
 
@@ -54,7 +59,9 @@ Pick actions that literally show what the line says. Use "name:arg" only where t
 Palettes (caption highlight colours): {", ".join(PALETTES)}.
 
 Reply with JSON only:
-{{"title": "...", "scene": "...", "palette": "...", "lines": ["..."], "beats": ["action" or ["action", "action"], ...], "caption": "..."}}
+{{"hooks": ["...", "...", "..."], "title": "...", "scene": "...", "palette": "...", "lines": ["..."], "beats": ["action" or ["action", "action"], ...], "caption": "..."}}
+- "hooks": write these first: three different candidates for line 1, each from another angle. Then use the one a
+  bored stranger is least able to scroll past as line 1.
 - "title": under 40 characters, a punchy name for the video (used in notifications and the history).
 - "beats" has exactly one entry per line.
 - "caption": one short natural sentence (under 120 characters) that teases the fact without giving the answer away, no hashtags.
@@ -85,6 +92,10 @@ def validate(script, fact, scenes=Scene.kinds):
         problems.append(f"scene '{script.get('scene')}' is not one of: {', '.join(scenes)}")
     if script.get("palette") not in PALETTES:
         problems.append(f"unknown palette '{script.get('palette')}'")
+    if lines and len(lines[-1].replace("*", "").split()) > MAX_HOOK_WORDS:
+        problems.append(f"last line longer than {MAX_HOOK_WORDS} words")
+    caption = script.get("caption", "").lower()
+    problems += [f"caption has banned phrase: '{p}'" for p in BANNED_PHRASES if p in caption]
     if not script.get("title") or len(script["title"]) > 45:
         problems.append("title missing or too long")
     if "#" in script.get("caption", ""):
@@ -109,6 +120,7 @@ def write_script(fact, fmt, scenes=Scene.kinds, tries=3):
             f"It failed these checks, fix every one:\n- " + "\n- ".join(problems)
         )
         script = chat_json(SYSTEM, prompt, temperature=0.8 if attempt == 0 else 0.6)
+        script["title"] = str(script.get("title", "")).replace("*", "")
         script["fact"], script["format"] = fact["id"], fmt
         problems = validate(script, fact, scenes)
         if not problems:

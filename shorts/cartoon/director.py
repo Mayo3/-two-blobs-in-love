@@ -26,6 +26,7 @@ BOUNCE = 0.28  # seconds of squash-and-stretch when a beat starts
 HOOK_CLOUD = 232  # size of the cloud behind the hook title
 OPENING_HOP = 0.7  # seconds both blobs hop at the start
 WORD_BOB = 0.03  # squash on every spoken word
+REACT_LAG = 0.11  # seconds B reacts after A: two people never move in perfect unison
 EMPH_STRETCH = 0.09  # stretch up on *highlighted* words
 
 ACTIONS = {}
@@ -59,10 +60,10 @@ def timed_beats(beats, line_times):
 
 
 class Animator:
-    def __init__(self, scene, beats, words=(), hook=None):
+    def __init__(self, scene, beats, words=(), clouds=()):
         self.scene = Scene(scene)
         self.beats = beats
-        self.hook = hook  # (seconds, centre y, text lines) of the cloud behind the hook, or None
+        self.clouds = clouds  # [{start, end, y, rows, pop, fade}]: clouds behind the hook and the closing question
         self.words = [w for w in words if w.get("start") is not None]  # caption tokens with timings
         self.A = Blob("A", "ff9a8b", "sprout", AX, GROUND, 330, +1, seed=1)
         self.B = Blob("B", "b9a3f5", "bow", BX, GROUND, 312, -1, seed=2)
@@ -90,9 +91,10 @@ class Animator:
                 lt = t - b["start"]
                 fn(self, lt, clamp(lt / max(dur, 0.01)), dur, b["arg"])
                 break
-        if lt < BOUNCE:  # both react to every new beat with a little squash and stretch
-            for blob in (A, B):
-                blob.tgt["squash"] += 0.07 * math.sin(math.pi * lt / BOUNCE)
+        # both react to every new beat with a little squash and stretch, B a moment after A
+        for blob, late in ((A, 0.0), (B, REACT_LAG)):
+            if late <= lt < late + BOUNCE:
+                blob.tgt["squash"] += 0.07 * math.sin(math.pi * (lt - late) / BOUNCE)
         self.move_to_speech(t)
         for blob, start in ((A, 0.0), (B, 0.12)):  # a quick double hop so the very first frames move
             if start <= t < start + OPENING_HOP:
@@ -117,13 +119,16 @@ class Animator:
         for f in self.front:
             f(ctx)
         ctx.restore()
-        if self.hook and t < self.hook[0]:
-            self.hook_cloud(ctx, t, *self.hook)
+        for c in self.clouds:
+            if c["start"] <= t < c["end"]:
+                self.hook_cloud(ctx, t, c)
 
-    def hook_cloud(self, ctx, t, seconds, y, rows=3):
-        """Puffy white cloud the hook sits in: pops in, floats, fades as the hook ends."""
-        pop = 0.75 + 0.25 * ease_out_back(min(1, t * 3.5))
-        fade = clamp((seconds - t) / 0.25)
+    def hook_cloud(self, ctx, t, c):
+        """Puffy white cloud a line sits in. The hook's cloud is there, full size, on the very
+        first frame and fades as the hook ends; the closing question's pops in and stays."""
+        y, rows = c["y"], c["rows"]
+        pop = 0.75 + 0.25 * ease_out_back(min(1, (t - c["start"]) * 3.5)) if c["pop"] else 1.0
+        fade = clamp((c["end"] - t) / 0.25) if c["fade"] else 1.0
         ctx.save()
         ctx.translate(W / 2, y + 14 + math.sin(t * 2.2) * 6)  # the bumps sit high, so centre the body on the text
         ctx.scale(pop * 1.3, pop * (1 + 0.3 * max(0, rows - 3)))  # wider than tall; taller for a 4th line
@@ -136,23 +141,24 @@ class Animator:
     def move_to_speech(self, t):
         """Blobs bob on every spoken word; on highlighted words they stretch up, throw
         their free arms up and sparkle. Added on top of whatever the action does."""
-        word = next((w for w in self.words if w["start"] <= t < w["end"]), None)
-        if word is None:
-            return
-        p = clamp((t - word["start"]) / max(word["end"] - word["start"], 0.05))
-        on_stage = [b for b in (self.A, self.B) if b.tgt["x"] != OFFSTAGE]
-        for b in on_stage:
-            b.tgt["squash"] += WORD_BOB * math.sin(math.pi * p)
-        if not word["emph"]:
-            return
-        for b in on_stage:
-            b.tgt["squash"] -= EMPH_STRETCH * math.sin(math.pi * p)
+        sparkle = None
+        for b, late, amount in ((self.A, 0.0, 1.0), (self.B, REACT_LAG, 0.7)):  # B follows A, a little smaller
+            word = next((w for w in self.words if w["start"] <= t - late < w["end"]), None)
+            if word is None or b.tgt["x"] == OFFSTAGE:
+                continue
+            p = clamp((t - late - word["start"]) / max(word["end"] - word["start"], 0.05))
+            b.tgt["squash"] += WORD_BOB * amount * math.sin(math.pi * p)
+            if not word["emph"]:
+                continue
+            b.tgt["squash"] -= EMPH_STRETCH * amount * math.sin(math.pi * p)
             if b.tgt["arm_out"] < 40:  # only arms the action isn't already using
-                b.tgt["arm_out"] = 125
+                b.tgt["arm_out"] = 125 if b is self.A else 105
             if b.eyes == "open":
                 b.eyes = "wide"
-        lt = t - word["start"]
-        self.front.append(lambda ctx: P.sparkles(ctx, lt, 540, 1250, spread=300))
+            if b is self.A:
+                sparkle = t - word["start"]
+        if sparkle is not None:
+            self.front.append(lambda ctx: P.sparkles(ctx, sparkle, 540, 1250, spread=300))
 
     def camera(self, ctx, dt, index, lt, dur):
         """Calm framing: every other beat glides to a closer shot, and each beat pushes in slowly."""

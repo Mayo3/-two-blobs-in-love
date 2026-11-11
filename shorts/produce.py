@@ -5,7 +5,7 @@ from .captions import HOOK_Y, align, build_ass, hook_text, line_times, tokenize
 from .cartoon.director import Animator, timed_beats
 from .facts import FACT_BY_ID
 from .render import audio_duration, render_cartoon, render_footage
-from .style import check_script
+from .style import MAX_HOOK_WORDS, check_script
 from .tts import synthesize
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,13 +30,19 @@ def produce(script, work, out_path, voice, style="cartoon"):
     tokens = align(tokenize(script["lines"]), words)
     lines = line_times(tokens, len(script["lines"]), duration)
     hook_end = lines[0][1]  # the hook stays up while line 1 is spoken
+    # a short closing question gets the cloud too; a long one would not fit and stays in the captions
+    last = len(script["lines"]) - 1
+    outro_start = lines[last][0] if style == "cartoon" and len(spoken[last].split()) <= MAX_HOOK_WORDS else None
     with open(os.path.join(work, "captions.ass"), "w", encoding="utf-8") as f:
-        f.write(build_ass(tokens, duration, script["palette"], CHANNEL, script["title"], hook_end=hook_end))
+        f.write(build_ass(tokens, duration, script["palette"], CHANNEL, script["title"], hook_end=hook_end, outro_start=outro_start))
     if style == "footage":
         from .footage import pick_clips
         clips = pick_clips(script["footage"], seed=os.path.basename(out_path))
         render_footage(work, audio, "captions.ass", out_path, script["palette"], duration, FONTS, clips, lines)
     else:
-        animator = Animator(script["scene"], timed_beats(script["beats"], lines), tokens, hook=(hook_end, HOOK_Y, hook_text(tokens)[1]))
+        clouds = [{"start": 0.0, "end": hook_end, "y": HOOK_Y, "rows": hook_text(tokens)[1], "pop": False, "fade": True}]
+        if outro_start:
+            clouds.append({"start": outro_start, "end": duration + 1, "y": HOOK_Y, "rows": hook_text(tokens, last)[1], "pop": True, "fade": False})
+        animator = Animator(script["scene"], timed_beats(script["beats"], lines), tokens, clouds=clouds)
         render_cartoon(work, audio, "captions.ass", out_path, script["palette"], duration, FONTS, animator)
     return duration

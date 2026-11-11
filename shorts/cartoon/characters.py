@@ -6,6 +6,9 @@ import random
 from .draw import OUTLINE, ellipse, fill_stroke, hexc, mix, rrect
 
 SMOOTH = 9.0  # higher = snappier
+EYE_SMOOTH = 24.0  # eyes jump to a new spot much faster than a body moves
+BLINK = 0.2  # seconds for the lids to close and open again
+SWAY_K, SWAY_D = 110.0, 7.5  # spring that lets the sprout and bow trail behind the body and wobble to rest
 
 
 class Blob:
@@ -19,6 +22,14 @@ class Blob:
         self.rng = random.Random(seed)
         self.next_blink = self.rng.uniform(1.0, 3.0)
         self.blink_t = -1.0
+        # no two living things breathe, fidget or look around in step: each blob gets its own rhythm
+        self.breath_rate = self.rng.uniform(2.1, 2.9)
+        self.breath_phase = self.rng.uniform(0, 6.28)
+        self.gaze = (0.0, 0.0)  # small darting offsets of the eyes, re-rolled every second or so
+        self.next_gaze = self.rng.uniform(0.4, 1.2)
+        self.sway = self.sway_v = 0.0  # angle (radians) of the trailing sprout / bow
+        self.prev = None
+        self.now = 0.0
         self.twin_color = self.base_color
         self.twin_accessory = accessory
         # current values (smoothed) — persistent ones are never reset per frame
@@ -37,12 +48,28 @@ class Blob:
         self.sweat = False
 
     def update(self, dt, t):
-        k = 1 - math.exp(-SMOOTH * dt)
+        k, k_eye = 1 - math.exp(-SMOOTH * dt), 1 - math.exp(-EYE_SMOOTH * dt)
+        turned = abs(self.tgt["look_x"] - self.cur["look_x"]) + abs(self.tgt["look_y"] - self.cur["look_y"])
         for key, v in self.tgt.items():
-            self.cur[key] += (v - self.cur[key]) * k
+            self.cur[key] += (v - self.cur[key]) * (k_eye if key.startswith("look") else k)
+        if turned > 0.9 and t - self.blink_t > 0.6:  # people blink as they look somewhere new
+            self.blink_t = t
         if t >= self.next_blink:
             self.blink_t = t
-            self.next_blink = t + self.rng.uniform(2.2, 4.5)
+            # now and then a quick double blink
+            self.next_blink = t + (0.34 if self.rng.random() < 0.2 else self.rng.uniform(2.0, 4.8))
+        if t >= self.next_gaze:
+            self.gaze = (self.rng.uniform(-0.16, 0.16), self.rng.uniform(-0.12, 0.1))
+            self.next_gaze = t + self.rng.uniform(0.5, 1.9)
+        # the sprout and bow are pushed back by any move of the body, then swing to rest
+        now = (self.cur["x"], self.cur["squash"], self.cur["lean"])
+        if self.prev and dt > 0:
+            push = (now[0] - self.prev[0]) * 0.012 + (now[1] - self.prev[1]) * 9 + (now[2] - self.prev[2]) * 0.03
+            self.sway_v -= push / dt * 0.9
+        self.sway_v += math.cos(t * 9) * 4.0 * self.hop * dt * 9
+        self.prev = now
+        self.sway_v += (-SWAY_K * self.sway - SWAY_D * self.sway_v) * dt
+        self.sway = max(-0.7, min(0.7, self.sway + self.sway_v * dt))
 
     def draw(self, ctx, t):
         c = self.cur
@@ -50,7 +77,7 @@ class Blob:
             return
         w = self.size / 2
         h = self.size * 0.52
-        bob = math.sin(t * 2.6 + self.inner) * 0.02
+        bob = math.sin(t * self.breath_rate + self.breath_phase) * 0.02
         squash = bob + c["squash"]
         sx, sy = 1 + squash, 1 - squash
         shiver = math.sin(t * 60) * 5 * c["shiver"]
@@ -71,7 +98,8 @@ class Blob:
 
         ctx.save()
         ctx.translate(cx, cy)
-        ctx.rotate(math.radians(c["lean"]))
+        # a slow shift of weight from side to side, never quite still
+        ctx.rotate(math.radians(c["lean"] + 1.1 * math.sin(t * self.breath_rate * 0.31 + self.breath_phase * 2)))
         ctx.scale(sx, sy)
 
         # arms behind the body edge
@@ -92,6 +120,7 @@ class Blob:
         ellipse(ctx, -0.45 * w, -0.6 * h, 0.16 * w, 0.1 * h)
         ctx.fill()
 
+        self.now = t
         self._accessory(ctx, w, h, color, c)
         self._face(ctx, w, h, t, c)
         ctx.restore()
@@ -129,6 +158,7 @@ class Blob:
 
     def _accessory(self, ctx, w, h, color, c):
         acc = self.twin_accessory if c["mix"] > 0.5 else self.accessory
+        sway = self.sway + 0.05 * math.sin(self.breath_phase + self.breath_rate * 0.8 * self.now)
         if c["old"] > 0.05:
             # grey tuft
             ctx.save()
@@ -137,6 +167,10 @@ class Blob:
                 fill_stroke(ctx, (0.88, 0.88, 0.9, c["old"]), width=5)
             ctx.restore()
         if acc == "sprout" and c["old"] < 0.6:
+            ctx.save()
+            ctx.translate(0, -h)
+            ctx.rotate(sway)
+            ctx.translate(0, h)
             ctx.set_source_rgba(*OUTLINE)
             ctx.set_line_width(6)
             ctx.move_to(0, -h)
@@ -149,8 +183,13 @@ class Blob:
                 ellipse(ctx, side * 22, 0, 24, 12)
                 fill_stroke(ctx, hexc("7ccf6e"), width=5)
                 ctx.restore()
+            ctx.restore()
         elif acc == "bow" and c["old"] < 0.6:
             bx, by = 0.42 * w, -0.86 * h
+            ctx.save()
+            ctx.translate(bx, by)
+            ctx.rotate(sway * 0.7)
+            ctx.translate(-bx, -by)
             for side in (-1, 1):
                 ctx.move_to(bx, by)
                 ctx.line_to(bx + side * 34, by - 20)
@@ -159,21 +198,23 @@ class Blob:
                 fill_stroke(ctx, hexc("ff6f9c"), width=5)
             ellipse(ctx, bx, by, 11, 11)
             fill_stroke(ctx, hexc("ff6f9c"), width=5)
+            ctx.restore()
 
     def _face(self, ctx, w, h, t, c):
-        lx, ly = c["look_x"], c["look_y"]
+        lx, ly = c["look_x"] + self.gaze[0], c["look_y"] + self.gaze[1]
         ex, ey = 0.3 * w, -0.18 * h
-        ox, oy = lx * 0.13 * w, ly * 0.12 * h
+        ox, oy = c["look_x"] * 0.13 * w, c["look_y"] * 0.12 * h  # the face follows the look, the eyes also dart
+        gx, gy = self.gaze[0] * 0.05 * w, self.gaze[1] * 0.05 * w
         blink = 1.0
-        if 0 <= t - self.blink_t < 0.14:
-            blink = 0.12
+        if 0 <= t - self.blink_t < BLINK:  # lids close and open smoothly instead of snapping
+            blink = 1 - 0.9 * math.sin(math.pi * (t - self.blink_t) / BLINK) ** 0.6
         # blush
         ctx.set_source_rgba(1, 0.45, 0.55, 0.45 * c["blush"])
         for side in (-1, 1):
             ellipse(ctx, side * 0.56 * w + ox * 0.5, 0.05 * h + oy * 0.5, 0.15 * w, 0.08 * w)
             ctx.fill()
         for side in (-1, 1):
-            x, y = side * ex + ox, ey + oy
+            x, y = side * ex + ox + gx, ey + oy + gy
             if self.eyes == "happy":
                 ctx.set_source_rgba(*OUTLINE)
                 ctx.set_line_width(7)

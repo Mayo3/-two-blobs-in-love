@@ -11,6 +11,8 @@ HEADLINE_Y = 540
 HOOK_Y = 570  # centre of the hook (spoken line 1, shown in a cloud while it is said)
 HOOK_WRAP = 16  # characters per line inside the cloud
 HOOK_EMPH = "E8436F"  # *highlighted* hook words, readable on the white cloud
+STAT_Y = 520  # big number that pops above the couple when the narrator says it
+STAT_HOLD = 2.6  # seconds a big number stays up
 MAX_WORDS_PER_CHUNK = 3
 MAX_CHARS_PER_CHUNK = 15  # keeps the line clear of TikTok's buttons on the right
 
@@ -136,10 +138,10 @@ def esc(text):
     return text.replace("\\", "\\\\").replace("{", "(").replace("}", ")")
 
 
-def hook_text(tokens):
-    """The spoken hook (line 1) for the cloud, *highlighted* words in pink.
+def hook_text(tokens, line=0):
+    """A spoken line (the hook, or the closing question) for the cloud, *highlighted* words in pink.
     Returns (ass text, number of text lines)."""
-    words = [t for t in tokens if t["line"] == 0]
+    words = [t for t in tokens if t["line"] == line]
     rows = wrap(" ".join(esc(t["text"]) for t in words), HOOK_WRAP).split("\\N")
     out, i = [], 0
     for row in rows:
@@ -152,6 +154,27 @@ def hook_text(tokens):
     widest = max(len(r) for r in rows)
     shrink = f"{{\\fs{int(76 * HOOK_WRAP / widest)}}}" if widest > HOOK_WRAP else ""  # a long word must stay inside the cloud
     return shrink + "\\N".join(out), len(rows)
+
+
+def stat_pops(tokens, start, end):
+    """The numbers the narrator stresses ("*86 percent*"), shown big while they are said:
+    the payoff of the video is seen, not only heard. Returns [{start, end, text}]."""
+    pops = []
+    for i, t in enumerate(tokens):
+        m = re.match(r"\D*(\d+(?:[.,]\d+)?)", t["text"])
+        if not (t["emph"] and m and start <= t["start"] < end):
+            continue
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+        text = m.group(1).rstrip(".,")
+        if nxt and nxt["text"].lower().startswith("percent"):
+            text += "%"
+        elif nxt and nxt["emph"] and nxt["line"] == t["line"] and not t["text"][-1] in ".,!?:;":
+            text += " " + nxt["text"].strip(".,!?:;*\"'")  # "517 couples", "36 questions"
+        pops.append({"start": t["start"], "text": text})
+    for i, p in enumerate(pops):
+        nxt = pops[i + 1]["start"] if i + 1 < len(pops) else end
+        p["end"] = min(nxt, p["start"] + STAT_HOLD, end)
+    return [p for p in pops if p["end"] - p["start"] > 0.3]
 
 
 def headlines(tokens, title, duration):
@@ -182,10 +205,12 @@ def headlines(tokens, title, duration):
     return [it for it in items if it["end"] - it["start"] > 0.3]
 
 
-def build_ass(tokens, duration, palette, series_label, title="", big_text=False, hook_end=None):
+def build_ass(tokens, duration, palette, series_label, title="", big_text=False, hook_end=None, outro_start=None):
     """big_text: title, then every *emphasis* phrase in big letters. hook_end: the spoken
     first line sits in the cloud until this time and is left out of the captions, so the
-    opening seconds carry one message that is read and heard at once."""
+    opening seconds carry one message that is read and heard at once. outro_start: from
+    this time the closing question sits in the cloud the same way, whole, until the video
+    ends, so it can be read and answered, and the loop back to the hook is cloud to cloud."""
     pal = PALETTES[palette]
     white = ass_color("FFFFFF")
     accent = ass_color(pal["accent"])
@@ -211,20 +236,27 @@ Style: Source,DM Serif Display,34,{white},{white},{ass_color('3b2340')},{shadow}
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     ev = []
-    ev.append(f"Dialogue: 1,{ts(0)},{ts(duration)},Label,,0,0,0,,{{\\fad(400,0)}}{esc(series_label)}")
+    ev.append(f"Dialogue: 1,{ts(0)},{ts(duration)},Label,,0,0,0,,{esc(series_label)}")
     heads = headlines(tokens, title, duration) if big_text else []
     anim = "\\fad(250,200)\\fscx92\\fscy92\\t(0,220,\\fscx100\\fscy100)"
     for it in heads:
         style = "Title" if it["title"] else "Headline"
         ev.append(f"Dialogue: 2,{ts(it['start'])},{ts(it['end'])},{style},,0,0,0,,{{\\pos({W // 2},{HEADLINE_Y})\\q2{anim}}}{wrap(esc(it['text']), 14 if it['title'] else 12)}")
+    last = tokens[-1]["line"]
     if hook_end:
-        # dark text inside a white cloud (drawn by the cartoon), readable on every scene and palette
-        ev.append(f"Dialogue: 2,{ts(0)},{ts(hook_end)},Hook,,0,0,0,,{{\\pos({W // 2},{HOOK_Y})\\q2{anim}}}{hook_text(tokens)[0]}")
-        tokens = [t for t in tokens if t["line"] > 0]
+        # dark text inside a white cloud (drawn by the cartoon), readable on every scene and palette.
+        # No fade-in: the very first frame (also the cover in the profile grid) already shows the whole hook.
+        ev.append(f"Dialogue: 2,{ts(0)},{ts(hook_end)},Hook,,0,0,0,,{{\\pos({W // 2},{HOOK_Y})\\q2\\fad(0,200)}}{hook_text(tokens)[0]}")
+    if outro_start:
+        ev.append(f"Dialogue: 2,{ts(outro_start)},{ts(duration)},Hook,,0,0,0,,{{\\pos({W // 2},{HOOK_Y})\\q2\\fad(200,0)}}{hook_text(tokens, last)[0]}")
+    for p in stat_pops(tokens, hook_end or 0, outro_start or duration):
+        grow = f"\\fs{230 if len(p['text']) <= 4 else 150}\\fad(0,180)\\fscx60\\fscy60\\t(0,140,\\fscx108\\fscy108)\\t(140,240,\\fscx100\\fscy100)"
+        ev.append(f"Dialogue: 2,{ts(p['start'])},{ts(p['end'])},Headline,,0,0,0,,{{\\pos({W // 2},{STAT_Y}){grow}}}{esc(p['text'])}")
+    tokens = [t for t in tokens if not (hook_end and t["line"] == 0) and not (outro_start and t["line"] == last)]
 
     chunks = chunk(tokens)
     for ci, ch in enumerate(chunks):
-        chunk_end = chunks[ci + 1][0]["start"] if ci + 1 < len(chunks) else duration
+        chunk_end = chunks[ci + 1][0]["start"] if ci + 1 < len(chunks) else (outro_start or duration)
         for wi, t in enumerate(ch):
             start = t["start"]
             end = ch[wi + 1]["start"] if wi + 1 < len(ch) else chunk_end

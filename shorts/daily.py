@@ -121,7 +121,9 @@ def main():
     meta_path = os.path.join(out_dir, "meta.json")
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
-    history.append({k: meta[k] for k in ("date", "fact", "format", "scene", "voice", "title")})
+    # hook, question and length are kept so TikTok's numbers can later be set against what each video opened with
+    history.append({**{k: meta[k] for k in ("date", "fact", "format", "scene", "voice", "title", "duration")},
+                    "hook": script["lines"][0].replace("*", ""), "question": script["lines"][-1].replace("*", "")})
     save_history(history)
     print(f"{video}  ({duration:.1f}s)\n{meta['caption']}\n{meta['comment']}")
 

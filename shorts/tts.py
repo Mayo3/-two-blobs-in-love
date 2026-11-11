@@ -17,6 +17,7 @@ MODEL = os.path.join(ROOT, "models", "kokoro-v1.0.onnx")
 VOICES_BIN = os.path.join(ROOT, "models", "voices-v1.0.bin")
 LINE_PAUSE = {".": 0.42, "?": 0.48, "!": 0.42, "…": 0.5}  # silence after a line, by its last char
 DEFAULT_LINE_PAUSE = 0.3
+HOOK_PAUSE = 0.28  # after line 1: viewers decide to stay or swipe right here, so the answer starts at once
 LEAD_IN = 0.15  # just enough silence that players don't clip the first word
 SPEED = 0.92  # a little slower than default reads calmer and more natural
 # a person never reads every line at the same pace or pauses the same length; small random
@@ -131,12 +132,14 @@ def _kokoro_lines(lines, voice, out_path, speed):
     rng = random.Random(" ".join(lines))
     sr = 24000
     chunks, words, t = [np.zeros(int(sr * LEAD_IN), dtype=np.float32)], [], LEAD_IN
-    for line in lines:
+    for n, line in enumerate(lines):
         audio, sr = k.create(line, voice=style, speed=speed + rng.uniform(*PACE_JITTER), lang="en-us")
         spans = _speech_spans(audio, sr)
         for w in _time_line(line.split(), spans):
             words.append({"text": w["text"], "start": t + w["start"], "end": t + w["end"]})
         pause = LINE_PAUSE.get(line.rstrip()[-1:], DEFAULT_LINE_PAUSE) * rng.uniform(*PAUSE_JITTER)
+        if n == 0:
+            pause = HOOK_PAUSE
         chunks += [audio, np.zeros(int(sr * pause), dtype=np.float32)]
         t += len(audio) / sr + pause
     sf.write(out_path, np.concatenate(chunks), sr)
