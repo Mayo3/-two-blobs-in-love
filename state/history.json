@@ -105,5 +105,16 @@
     "duration": 15.0,
     "hook": "Where do most couples actually meet now?",
     "question": "Did you meet online, or in person?"
+  },
+  {
+    "date": "2026-11-11",
+    "fact": "language-match",
+    "format": "reveal",
+    "scene": "kitchen",
+    "voice": "cast",
+    "title": "The tiny words that predict couples",
+    "duration": 25.7,
+    "hook": "Can the word the predict your future?",
+    "question": "Do you two text the same way?"
   }
 ]
