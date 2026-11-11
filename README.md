@@ -1,7 +1,8 @@
 # Two Blobs in Love 💕
 
 A free, automated TikTok channel: one short video a day with a science-backed fact about couples,
-narrated over a cartoon of two blob characters who act out every line.
+told as a little conversation between two cartoon blobs, Pip (pink, sprout, guesses first) and Bo (purple, bow,
+knows the answer), who act out every line.
 
 Every morning GitHub Actions:
 1. picks a fact from the curated bank (`shorts/facts.py`), rotating facts and formats so nothing repeats,
@@ -13,9 +14,9 @@ You post it on TikTok yourself (about 30 seconds; add a trending sound). That's 
 
 Everything is free: GitHub Actions, Gemini free tier, Chatterbox and Kokoro (open-source voices), ntfy.
 
-The narrator is Chatterbox reading with feeling in a voice copied from `voices/sarah.wav` (a synthetic voice).
-It is a 3 GB model that needs about 5-15 minutes a video on GitHub's machines; if it can't run, Kokoro narrates
-instead and the phone notification names the voice that was used.
+Pip and Bo speak with Chatterbox, which reads with feeling, in voices copied from `voices/pip.wav` and
+`voices/sarah.wav` (both synthetic voices). It is a 3 GB model that needs about 5-15 minutes a video on GitHub's
+machines; if it can't run, two Kokoro voices speak instead and the phone notification says `cast-kokoro`.
 
 ## Setup
 
@@ -32,7 +33,7 @@ instead and the phone notification names the voice that was used.
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt   # Windows
 # voice model (once): download kokoro-v1.0.onnx and voices-v1.0.bin from
 # https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0 into models/
-python make_sample.py                                      # render the 3 hand-written samples to out/ (Kokoro voice)
+python make_sample.py                                      # render the 3 hand-written samples to out/ (quick Kokoro voices)
 # Chatterbox voice (optional, 4.6 GB): python -m venv voice-lab/.venv-chatterbox, then in it
 #   pip install chatterbox-tts==0.1.7 "setuptools<81" soundfile   — without it the daily job uses Kokoro
 python -m shorts.daily --script build/test-script.json     # render a ready-made script like the daily job

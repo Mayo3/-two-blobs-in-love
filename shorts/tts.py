@@ -1,7 +1,7 @@
 """Text-to-speech with per-word timings for captions.
 
-The narrator is Chatterbox (open-source, reads with feeling) speaking in a voice copied
-from a short clip in voices/. It is big and slow, so it runs in its own Python environment
+The two blobs, Pip and Bo, talk to each other. Each is Chatterbox (open-source, reads
+with feeling) speaking in a voice copied from a short clip in voices/. It is big and slow, so it runs in its own Python environment
 (see shorts/chatterbox_lines.py); if it is missing or fails, Kokoro (small, fast, calmer)
 reads the script instead, so there is always a video. Neither gives word timings, so we
 synthesize line by line, find the pauses in each line's audio, match them to its
@@ -22,9 +22,11 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL = os.path.join(ROOT, "models", "kokoro-v1.0.onnx")
 VOICES_BIN = os.path.join(ROOT, "models", "voices-v1.0.bin")
-LINE_PAUSE = {".": 0.42, "?": 0.48, "!": 0.42, "…": 0.5}  # silence after a line, by its last char
-DEFAULT_LINE_PAUSE = 0.3
-HOOK_PAUSE = 0.28  # after line 1: viewers decide to stay or swipe right here, so the answer starts at once
+LINE_PAUSE = {".": 0.5, "?": 0.5, "!": 0.45, "…": 0.6}  # silence after a line, by its last char
+DEFAULT_LINE_PAUSE = 0.35
+HOOK_PAUSE = 0.35  # after line 1: viewers decide to stay or swipe right here, so the answer starts soon
+REPLY = 0.8  # the other blob answering comes a little quicker than one blob carrying on
+NUMBER_BEAT = 0.35  # extra silence after a line with a number in it, so the finding can land
 LEAD_IN = 0.15  # just enough silence that players don't clip the first word
 SPEED = 0.92  # a little slower than default reads calmer and more natural
 # a person never reads every line at the same pace or pauses the same length; small random
@@ -33,12 +35,16 @@ PACE_JITTER = (-0.04, 0.05)  # added to SPEED per line
 PAUSE_JITTER = (0.75, 1.35)  # multiplies the pause after each line
 # custom voices: weighted mixes of Kokoro's built-in voices
 BLENDS = {"heart-nova": {"af_heart": 0.6, "af_nova": 0.4}}
-# Chatterbox voices: the clip whose speaker is copied, how much feeling (0.5 is neutral), and how
-# closely to follow the clip's own pace (lower lets the feeling lead)
-CHATTERBOX = {"sarah-warm": {"ref": os.path.join(ROOT, "voices", "sarah.wav"), "exaggeration": 0.7, "cfg_weight": 0.4}}
+# The cast. For Chatterbox: the clip whose speaker is copied, how much feeling (0.5 is neutral), and
+# how closely to follow the clip's own pace (lower lets the feeling lead). "backup" is the Kokoro
+# voice that speaks for the character when Chatterbox can't be used.
+CAST = {
+    "pip": {"ref": os.path.join(ROOT, "voices", "pip.wav"), "exaggeration": 0.7, "cfg_weight": 0.4, "backup": "am_puck"},
+    "bo": {"ref": os.path.join(ROOT, "voices", "sarah.wav"), "exaggeration": 0.7, "cfg_weight": 0.4, "backup": "heart-nova"},
+}
+NARRATOR = "bo"  # speaks any line that has no speaker
 CHATTERBOX_TIMEOUT = 25 * 60  # seconds; on a 4-core machine a video's speech takes roughly 5-15 minutes
-BACKUP_VOICE = "heart-nova"  # Kokoro, when Chatterbox can't be used
-LAST_VOICE = None  # the voice the last synthesize() call really used
+LAST_VOICE = None  # the voice the last synthesize() call really used: "cast", or "cast-kokoro" for the backups
 
 _kokoro = None
 
@@ -51,20 +57,24 @@ def _engine():
     return _kokoro
 
 
-def synthesize(lines, voice, out_path, speed=SPEED):
+def synthesize(lines, voice, out_path, speed=SPEED, speakers=None):
     """Speak script lines (plain text, no *markers*) into `out_path` (.wav for Kokoro, .mp3 for Edge).
-    Returns [{text, start, end}] per word, in seconds."""
+    voice: "cast" (Chatterbox, each line in its speaker's voice), "cast-kokoro" (the same cast with
+    their quick Kokoro backup voices), or one Kokoro / Edge voice for every line.
+    speakers: who says each line ("pip" / "bo"). Returns [{text, start, end}] per word, in seconds."""
     global LAST_VOICE
     LAST_VOICE = voice
     if voice.startswith("en-"):
         return _edge(" ".join(lines), voice, out_path)
-    if voice in CHATTERBOX:
+    who = [s if s in CAST else NARRATOR for s in (speakers or [None] * len(lines))]
+    if voice == "cast":
         try:
-            return _join_lines(lines, out_path, _chatterbox_audio(lines, voice))
+            return _join_lines(lines, out_path, _chatterbox_audio(lines, who), who)
         except Exception as e:  # never lose the day's video over the voice
-            print(f"Chatterbox voice '{voice}' failed ({e}); narrating with {BACKUP_VOICE} instead")
-            LAST_VOICE = voice = BACKUP_VOICE
-    return _join_lines(lines, out_path, _kokoro_audio(lines, voice, speed))
+            print(f"Chatterbox failed ({e}); the backup voices speak instead")
+            LAST_VOICE = voice = "cast-kokoro"
+    voices = [CAST[w]["backup"] for w in who] if voice == "cast-kokoro" else [voice] * len(lines)
+    return _join_lines(lines, out_path, _kokoro_audio(lines, voices, speed), who)
 
 
 # ---------- Kokoro ----------
@@ -145,12 +155,15 @@ def _time_line(words, spans):
     return out
 
 
-def _kokoro_audio(lines, voice, speed):
-    """[(audio, sample rate)] per line."""
+def _kokoro_audio(lines, voices, speed):
+    """[(audio, sample rate)] per line; voices[i] speaks lines[i]."""
     k = _engine()
-    style = sum(w * k.get_voice_style(n) for n, w in BLENDS[voice].items()) if voice in BLENDS else voice
     rng = random.Random("pace " + " ".join(lines))
-    return [k.create(line, voice=style, speed=speed + rng.uniform(*PACE_JITTER), lang="en-us") for line in lines]
+    out = []
+    for line, voice in zip(lines, voices):
+        style = sum(w * k.get_voice_style(n) for n, w in BLENDS[voice].items()) if voice in BLENDS else voice
+        out.append(k.create(line, voice=style, speed=speed + rng.uniform(*PACE_JITTER), lang="en-us"))
+    return out
 
 
 def chatterbox_python():
@@ -162,14 +175,13 @@ def chatterbox_python():
     return None
 
 
-def _chatterbox_audio(lines, voice):
-    """[(audio, sample rate)] per line, spoken by Chatterbox in its own environment."""
+def _chatterbox_audio(lines, who):
+    """[(audio, sample rate)] per line, spoken by Chatterbox in its own environment; who[i] says lines[i]."""
     import soundfile as sf
 
     exe = chatterbox_python()
     if not exe:
         raise RuntimeError("Chatterbox is not installed (set CHATTERBOX_PYTHON)")
-    cfg = CHATTERBOX[voice]
     env = dict(os.environ)
     cache = os.path.join(ROOT, "voice-lab", "hf-cache")  # a model downloaded for local tests, if there is one
     if os.path.isdir(cache) and "HF_HOME" not in env:
@@ -177,7 +189,8 @@ def _chatterbox_audio(lines, voice):
     with tempfile.TemporaryDirectory() as tmp:
         job = os.path.join(tmp, "job.json")
         with open(job, "w", encoding="utf-8") as f:
-            json.dump({"lines": lines, "out": tmp, **cfg}, f)
+            voices = [{k: CAST[w][k] for k in ("ref", "exaggeration", "cfg_weight")} for w in who]
+            json.dump({"lines": lines, "voices": voices, "out": tmp}, f)
         script = os.path.join(ROOT, "shorts", "chatterbox_lines.py")
         subprocess.run([exe, script, job], check=True, timeout=CHATTERBOX_TIMEOUT, env=env, stdout=sys.stderr)
         out = []
@@ -192,7 +205,7 @@ def _chatterbox_audio(lines, voice):
     return out
 
 
-def _join_lines(lines, out_path, line_audio):
+def _join_lines(lines, out_path, line_audio, who):
     """Join the spoken lines with natural pauses, write the file, and time every word."""
     import soundfile as sf
 
@@ -204,6 +217,10 @@ def _join_lines(lines, out_path, line_audio):
         for w in _time_line(line.split(), spans):
             words.append({"text": w["text"], "start": t + w["start"], "end": t + w["end"]})
         pause = LINE_PAUSE.get(line.rstrip()[-1:], DEFAULT_LINE_PAUSE) * rng.uniform(*PAUSE_JITTER)
+        if n + 1 < len(lines) and who[n + 1] != who[n]:
+            pause *= REPLY
+        if re.search(r"\d", line):
+            pause += NUMBER_BEAT
         if n == 0:
             pause = HOOK_PAUSE
         chunks += [audio, np.zeros(int(sr * pause), dtype=np.float32)]

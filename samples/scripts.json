@@ -2,103 +2,172 @@
   {
     "fact": "bids",
     "format": "quiz",
-    "voice": "heart-nova",
+    "voice": "cast-kokoro",
     "palette": "plum",
+    "scene": "home",
     "title": "The 86% habit of couples who last",
+    "speakers": [
+      "bo",
+      "pip",
+      "bo",
+      "pip",
+      "bo",
+      "pip",
+      "bo",
+      "pip",
+      "bo"
+    ],
     "lines": [
       "Can a *bird* tell if you two will last?",
-      "Your partner points and says, *look at that bird.*",
-      "That's a bid for attention.",
-      "Couples who lasted turned toward bids *86 percent* of the time.",
-      "Couples who split up? *33 percent.*",
-      "So be honest: do you look up?"
+      "Bo, look. A bird!",
+      "That was a *bid*, Pip. A tiny ask for my attention.",
+      "And you looked up. So?",
+      "Newlyweds were watched for exactly this. Those still married years later turned toward bids *86 percent* of the time.",
+      "And the ones who divorced?",
+      "*33 percent.*",
+      "So I should point at more birds.",
+      "Be honest: do you look up?"
     ],
-    "scene": "home",
     "beats": [
       "turn_toward",
       "point_bird",
       "bid",
       "turn_toward",
+      [
+        "watched",
+        "turn_toward"
+      ],
+      "shrug",
       "ignore",
+      "point_bird",
       "ask_viewer"
     ],
     "footage": [
-      "newlywed couple happy",
-      "bird flying",
       "couple talking kitchen",
       "couple smiling together",
-      "woman using phone bored",
-      "couple apartment relaxing"
+      "young couple",
+      "couple holding hands",
+      "happy elderly couple",
+      "couple apartment relaxing",
+      "couple laughing",
+      "couple walking park",
+      "couple coffee"
     ]
   },
   {
     "fact": "hand-holding",
     "format": "reveal",
-    "voice": "heart-nova",
+    "voice": "cast-kokoro",
     "palette": "night",
+    "scene": "lab",
     "title": "What holding hands does to your brain",
+    "speakers": [
+      "pip",
+      "bo",
+      "pip",
+      "bo",
+      "pip",
+      "bo",
+      "bo",
+      "pip",
+      "bo"
+    ],
     "lines": [
       "Whose hand calms your brain *the most*?",
-      "Expecting a shock, your brain braces for *fear*.",
-      "Holding a stranger's hand? It still braces.",
-      "For married women, their husband's hand calmed it *the most*.",
+      "Depends who is holding it.",
+      "A hand is a hand.",
+      "Married women were told a small shock might come. Alone, their brains braced for it.",
+      "And holding a stranger's hand?",
+      "Not as much. Their husband's hand calmed the brain *the most*.",
       "And the happier the couple, the *calmer* it stayed.",
-      "Scared? Their hand, or yours?"
+      "Okay. Give me your hand.",
+      "Scared? Their hand, or your own?"
     ],
-    "scene": "lab",
     "beats": [
       "hold_hands",
-      "scared",
+      "think",
+      "shrug",
+      [
+        "scared",
+        "alone"
+      ],
       "stranger",
       "calm",
       "calm",
+      "hold_hands",
       "ask_viewer"
     ],
     "footage": [
+      "couple talking kitchen",
+      "couple smiling together",
+      "young couple",
       "couple holding hands",
-      "storm lightning",
-      "handshake",
-      "hands touching",
       "happy elderly couple",
-      "couple holding hands walking"
+      "couple apartment relaxing",
+      "couple laughing",
+      "couple walking park",
+      "couple coffee"
     ]
   },
   {
     "fact": "faces-alike",
     "format": "myth-vs-fact",
-    "voice": "heart-nova",
+    "voice": "cast-kokoro",
     "palette": "sunset",
+    "scene": "park",
     "title": "Do couples really start to look alike?",
+    "speakers": [
+      "pip",
+      "pip",
+      "bo",
+      "pip",
+      "bo",
+      "bo",
+      "pip",
+      "bo",
+      "bo"
+    ],
     "lines": [
       "Do couples really start to *look alike*?",
-      "A famous study said yes.",
-      "Photos of *517 couples*, 20 to 69 years apart, say no.",
-      "They did *not* grow more alike over time.",
-      "They already looked similar *from the very start*.",
+      "Everyone says so. Grow old together, end up twins.",
+      "A famous study agreed with you.",
+      "Told you.",
+      "Then photos of *517 couples* were compared, early on and 20 to 69 years later.",
+      "They did *not* grow more alike.",
+      "So why do old couples match?",
+      "They looked similar *from the very start*.",
       "So, do you two look alike?"
     ],
-    "scene": "park",
     "beats": [
       "twin",
+      [
+        "unmatch",
+        "old"
+      ],
       "think",
+      "idle",
       [
         "photo:then",
         "compare"
       ],
+      "young",
+      "shrug",
       [
-        "old",
+        "twin",
         "unmatch"
       ],
-      "young",
       "ask_viewer"
     ],
     "footage": [
-      "elderly couple",
-      "vintage photo album",
-      "old photographs",
-      "old couple laughing",
+      "couple talking kitchen",
+      "couple smiling together",
       "young couple",
-      "face recognition"
+      "couple holding hands",
+      "happy elderly couple",
+      "couple apartment relaxing",
+      "couple laughing",
+      "couple walking park",
+      "couple coffee"
     ]
   }
 ]

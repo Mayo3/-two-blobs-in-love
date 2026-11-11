@@ -11,7 +11,7 @@ from .tts import synthesize
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONTS = os.path.join(ROOT, "fonts")
 CHANNEL = "Two Blobs in Love"
-VOICES = ["sarah-warm"]  # Chatterbox voice (see tts.CHATTERBOX); one narrator so the channel always sounds the same
+VOICES = ["cast"]  # Pip and Bo in their Chatterbox voices (see tts.CAST), so the channel always sounds the same
 
 
 def produce(script, work, out_path, voice, style="cartoon"):
@@ -25,16 +25,19 @@ def produce(script, work, out_path, voice, style="cartoon"):
 
     audio = "voice.mp3" if voice.startswith("en-") else "voice.wav"
     spoken = [line.replace("*", "") for line in script["lines"]]
-    words = synthesize(spoken, voice, os.path.join(work, audio))
+    speakers = script.get("speakers")  # who says each line; scripts without it are narrated
+    words = synthesize(spoken, voice, os.path.join(work, audio), speakers=speakers)
     duration = audio_duration(os.path.join(work, audio)) + 0.6
     tokens = align(tokenize(script["lines"]), words)
+    for t in tokens:
+        t["who"] = speakers[t["line"]] if speakers else None
     lines = line_times(tokens, len(script["lines"]), duration)
     hook_end = lines[0][1]  # the hook stays up while line 1 is spoken
     # a short closing question gets the cloud too; a long one would not fit and stays in the captions
     last = len(script["lines"]) - 1
     outro_start = lines[last][0] if style == "cartoon" and len(spoken[last].split()) <= MAX_HOOK_WORDS else None
     with open(os.path.join(work, "captions.ass"), "w", encoding="utf-8") as f:
-        f.write(build_ass(tokens, duration, script["palette"], CHANNEL, script["title"], hook_end=hook_end, outro_start=outro_start))
+        f.write(build_ass(tokens, duration, script["palette"], CHANNEL, script["title"], hook_end=hook_end, outro_start=outro_start, cast=bool(speakers)))
     if style == "footage":
         from .footage import pick_clips
         clips = pick_clips(script["footage"], seed=os.path.basename(out_path))

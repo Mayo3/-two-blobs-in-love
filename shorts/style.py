@@ -19,7 +19,7 @@ BANNED_PHRASES = [
 STUDY_WORDS = ["researcher", "scientist", "psychologist", "professor", "university", "journal"]
 
 # Things a good script must have.
-MIN_WORDS, MAX_WORDS = 30, 48           # about 14-20 seconds at the calm narration pace (most viewers left within 5s of 21-36s videos)
+MIN_WORDS, MAX_WORDS = 52, 70           # about 25-32 seconds: the finding, the odd detail behind it, and what it means (30 words made a 15s video that felt rushed and thin)
 MAX_SENTENCE_WORDS = 22                 # spoken sentences stay short
 MAX_HOOK_WORDS = 10                     # the first line has about 2 seconds to stop the scroll, and fits the cloud
 

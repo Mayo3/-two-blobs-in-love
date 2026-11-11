@@ -30,6 +30,7 @@ class Blob:
         self.sway = self.sway_v = 0.0  # angle (radians) of the trailing sprout / bow
         self.prev = None
         self.now = 0.0
+        self.talk = self.talk_cur = 0.0  # how far the mouth is open for speech (0 = not talking)
         self.twin_color = self.base_color
         self.twin_accessory = accessory
         # current values (smoothed) — persistent ones are never reset per frame
@@ -46,9 +47,11 @@ class Blob:
         self.eyes = "open"
         self.hop = 0.0
         self.sweat = False
+        self.talk = 0.0
 
     def update(self, dt, t):
         k, k_eye = 1 - math.exp(-SMOOTH * dt), 1 - math.exp(-EYE_SMOOTH * dt)
+        self.talk_cur += (self.talk - self.talk_cur) * (1 - math.exp(-34 * dt))  # lips are quick
         turned = abs(self.tgt["look_x"] - self.cur["look_x"]) + abs(self.tgt["look_y"] - self.cur["look_y"])
         for key, v in self.tgt.items():
             self.cur[key] += (v - self.cur[key]) * (k_eye if key.startswith("look") else k)
@@ -251,7 +254,10 @@ class Blob:
         ctx.set_line_width(7)
         ctx.set_line_cap(1)
         m = self.mouth
-        if m == "smile":
+        if self.talk_cur > 0.06:  # speaking: the mouth opens and closes with the words
+            ellipse(ctx, mx, my + 1, (0.085 - 0.02 * self.talk_cur) * w, (0.015 + 0.085 * self.talk_cur) * w)
+            fill_stroke(ctx, (0.6, 0.15, 0.25, 1), width=6)
+        elif m == "smile":
             ctx.arc(mx, my - 6, 0.12 * w, math.pi * 0.2, math.pi * 0.8)
             ctx.stroke()
         elif m == "grin":

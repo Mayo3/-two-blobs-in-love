@@ -3,7 +3,7 @@ environment Chatterbox is installed in (it needs other package versions than the
 
     python chatterbox_lines.py job.json
 
-job.json: {"lines": [...], "out": dir, "ref": voice clip, "exaggeration": 0.7, "cfg_weight": 0.4}
+job.json: {"lines": [...], "out": dir, "voices": [{"ref": voice clip, "exaggeration": 0.7, "cfg_weight": 0.4} per line]}
 Writes 00.wav, 01.wav, ... into `out`. Imports nothing from the project.
 """
 import json
@@ -27,13 +27,18 @@ def main():
 
     t0 = time.time()
     model = ChatterboxTTS.from_pretrained(device="cpu")
-    model.prepare_conditionals(job["ref"], exaggeration=job["exaggeration"])  # copy the voice once, not per line
     print(f"chatterbox: model ready in {time.time() - t0:.0f}s", flush=True)
     seed = zlib.crc32(" ".join(job["lines"]).encode("utf-8"))  # the same script always sounds the same
+    copied = {}  # each voice is copied from its clip once, not once per line
     for n, line in enumerate(job["lines"]):
+        voice = job["voices"][n]
+        if voice["ref"] not in copied:
+            model.prepare_conditionals(voice["ref"], exaggeration=voice["exaggeration"])
+            copied[voice["ref"]] = model.conds
+        model.conds = copied[voice["ref"]]
         for attempt in range(TRIES):
             torch.manual_seed(seed + n * 10 + attempt)
-            wav = model.generate(line, exaggeration=job["exaggeration"], cfg_weight=job["cfg_weight"]).squeeze().numpy()
+            wav = model.generate(line, exaggeration=voice["exaggeration"], cfg_weight=voice["cfg_weight"]).squeeze().numpy()
             seconds = len(wav) / model.sr
             if plausible(seconds, len(line.split())):
                 break

@@ -11,6 +11,10 @@ HEADLINE_Y = 540
 HOOK_Y = 570  # centre of the hook (spoken line 1, shown in a cloud while it is said)
 HOOK_WRAP = 16  # characters per line inside the cloud
 HOOK_EMPH = "E8436F"  # *highlighted* hook words, readable on the white cloud
+# the word being spoken lights up in its speaker's colour, so it is clear who is talking
+SPEAKER_COLOR = {"pip": "FFB3A6", "bo": "CDBBFF"}
+NAME_TAGS = (("Pip", 316, "FF9A8B"), ("Bo", 764, "B9A3F5"))  # name, x under the blob, colour
+NAME_Y = 1405
 STAT_Y = 520  # big number that pops above the couple when the narrator says it
 STAT_HOLD = 2.6  # seconds a big number stays up
 MAX_WORDS_PER_CHUNK = 3
@@ -39,7 +43,7 @@ def tokenize(lines):
             if starts:
                 emph = True
             text = raw.replace("*", "")
-            tokens.append({"text": text, "emph": emph, "line": li})
+            tokens.append({"text": text, "emph": emph, "line": li, "who": None})
             if raw.rstrip(".,!?;:\"')…").endswith("*"):
                 emph = False
     return tokens
@@ -205,7 +209,7 @@ def headlines(tokens, title, duration):
     return [it for it in items if it["end"] - it["start"] > 0.3]
 
 
-def build_ass(tokens, duration, palette, series_label, title="", big_text=False, hook_end=None, outro_start=None):
+def build_ass(tokens, duration, palette, series_label, title="", big_text=False, hook_end=None, outro_start=None, cast=False):
     """big_text: title, then every *emphasis* phrase in big letters. hook_end: the spoken
     first line sits in the cloud until this time and is left out of the captions, so the
     opening seconds carry one message that is read and heard at once. outro_start: from
@@ -230,6 +234,7 @@ Style: Label,DM Serif Display,54,{white},{white},{ass_color('3b2340')},{shadow},
 Style: Headline,DM Serif Display,150,{emph},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,7,6,5,90,90,0,1
 Style: Title,DM Serif Display,104,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,6,6,5,90,90,0,1
 Style: Hook,Fredoka SemiBold,76,{ass_color('3b2340')},{ass_color('3b2340')},{white},{ass_color('000000', 'FF')},0,0,0,0,100,100,0,0,1,0,0,5,90,90,0,1
+Style: Name,Fredoka SemiBold,76,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,6,3,5,0,0,0,1
 Style: Source,DM Serif Display,34,{white},{white},{ass_color('3b2340')},{shadow},0,1,0,0,100,100,0,0,1,4,2,8,90,90,370,1
 
 [Events]
@@ -243,6 +248,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         style = "Title" if it["title"] else "Headline"
         ev.append(f"Dialogue: 2,{ts(it['start'])},{ts(it['end'])},{style},,0,0,0,,{{\\pos({W // 2},{HEADLINE_Y})\\q2{anim}}}{wrap(esc(it['text']), 14 if it['title'] else 12)}")
     last = tokens[-1]["line"]
+    if cast and hook_end:  # introduce the two by name while the hook is up
+        for name, x, col in NAME_TAGS:
+            ev.append(f"Dialogue: 1,{ts(0)},{ts(hook_end)},Name,,0,0,0,,{{\\pos({x},{NAME_Y})\\fad(0,200)\\c{ass_color(col)}}}{name}")
     if hook_end:
         # dark text inside a white cloud (drawn by the cartoon), readable on every scene and palette.
         # No fade-in: the very first frame (also the cover in the profile grid) already shows the whole hook.
@@ -266,7 +274,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             for wj, u in enumerate(ch):
                 col = emph if u["emph"] else white
                 if wj == wi:
-                    col = emph if u["emph"] else accent
+                    col = emph if u["emph"] else ass_color(SPEAKER_COLOR[u["who"]]) if u.get("who") in SPEAKER_COLOR else accent
                     parts.append(f"{{\\c{col}\\fscx108\\fscy108}}{esc(u['text'])}{{\\fscx100\\fscy100}}")
                 else:
                     parts.append(f"{{\\c{col}}}{esc(u['text'])}")

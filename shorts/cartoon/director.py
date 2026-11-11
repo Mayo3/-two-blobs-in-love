@@ -142,12 +142,23 @@ class Animator:
         """Blobs bob on every spoken word; on highlighted words they stretch up, throw
         their free arms up and sparkle. Added on top of whatever the action does."""
         sparkle = None
+        now = next((w for w in self.words if w["start"] <= t < w["end"]), None)
+        speaker = {"pip": self.A, "bo": self.B}.get(now.get("who")) if now else None
+        if speaker and speaker.tgt["x"] != OFFSTAGE:
+            # the one whose line it is talks: the mouth opens about once a syllable and closes between words
+            p = clamp((t - now["start"]) / max(now["end"] - now["start"], 0.05))
+            beats = max(1, round(len(now["text"]) / 3.2))
+            speaker.talk = (0.3 + 0.7 * abs(math.sin(math.pi * p * beats))) * min(1, 6 * p, 6 * (1 - p) + 0.25)
+            listener = self.B if speaker is self.A else self.A
+            if abs(listener.tgt["look_y"]) < 0.3:  # unless the action has them looking somewhere, they listen
+                listener.tgt["look_x"] = 0.8 * listener.inner
         for b, late, amount in ((self.A, 0.0, 1.0), (self.B, REACT_LAG, 0.7)):  # B follows A, a little smaller
             word = next((w for w in self.words if w["start"] <= t - late < w["end"]), None)
             if word is None or b.tgt["x"] == OFFSTAGE:
                 continue
             p = clamp((t - late - word["start"]) / max(word["end"] - word["start"], 0.05))
-            b.tgt["squash"] += WORD_BOB * amount * math.sin(math.pi * p)
+            if speaker is None or b is speaker:  # in a dialogue only the one talking bobs along
+                b.tgt["squash"] += WORD_BOB * (amount if speaker is None else 1.0) * math.sin(math.pi * p)
             if not word["emph"]:
                 continue
             b.tgt["squash"] -= EMPH_STRETCH * amount * math.sin(math.pi * p)
