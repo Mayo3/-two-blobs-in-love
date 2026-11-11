@@ -94,5 +94,16 @@
     "scene": "lab",
     "voice": "heart-nova",
     "title": "Does bad sleep ruin your *arguments*?"
+  },
+  {
+    "date": "2026-11-11",
+    "fact": "online-meeting",
+    "format": "reveal",
+    "scene": "cafe",
+    "voice": "sarah-warm",
+    "title": "How couples actually meet now",
+    "duration": 15.0,
+    "hook": "Where do most couples actually meet now?",
+    "question": "Did you meet online, or in person?"
   }
 ]
