@@ -23,7 +23,7 @@ def main():
     r = requests.post("https://ntfy.sh/", json={
         "topic": topic,
         "title": f"🎬 New TikTok ready: {meta['title']}",
-        "message": f"{meta['caption']}\n\nPin as first comment:\n{meta['comment']}\n\n({meta['duration']}s · long-press to copy)",
+        "message": f"{meta['caption']}\n\nPin as first comment:\n{meta['comment']}\n\n({meta['duration']}s · voice: {meta['voice']} · long-press to copy)",
         "tags": ["two_hearts"],
         "click": video_url,
         "actions": actions,

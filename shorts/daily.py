@@ -112,6 +112,8 @@ def main():
     out_dir = os.path.join(ROOT, "out", today.isoformat())
     video = os.path.join(out_dir, f"{name}.mp4")
     duration = produce(script, os.path.join(ROOT, "build", name), video, voice)
+    from . import tts
+    voice = tts.LAST_VOICE or voice  # the backup voice, if the main one could not be used
 
     meta = {
         "date": today.isoformat(), "fact": fact["id"], "format": script["format"], "scene": script["scene"], "voice": voice,

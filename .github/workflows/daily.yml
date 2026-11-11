@@ -1,7 +1,7 @@
 name: daily-video
 
 # Every morning: pick a fact, write the script with a free model (Gemini free tier),
-# render the cartoon video, attach it to a GitHub release and push the download
+# render the cartoon video (narrated by Chatterbox, or by Kokoro if that can't run), attach it to a GitHub release and push the download
 # link plus a ready-to-paste TikTok caption to your phone via ntfy.
 
 on:
@@ -23,7 +23,7 @@ concurrency:
 jobs:
   make:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60 # the narrator alone may take 15 minutes, 25 at the very most
     steps:
       - uses: actions/checkout@v4
 
@@ -68,6 +68,49 @@ jobs:
           for f in kokoro-v1.0.onnx voices-v1.0.bin; do
             [ -f "models/$f" ] || curl -sSfL -o "models/$f" "$base/$f"
           done
+
+      # The narrator (Chatterbox) is big and needs its own Python environment. Every step here may
+      # fail without failing the job: the video is then narrated by the small backup voice (Kokoro).
+      - name: Python for the narrator
+        if: steps.done.outputs.skip != 'true'
+        id: narrator-python
+        continue-on-error: true
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          update-environment: false
+
+      - name: Cache narrator packages
+        if: steps.done.outputs.skip != 'true'
+        continue-on-error: true
+        uses: actions/cache@v4
+        with:
+          path: ~/chatterbox-venv
+          key: chatterbox-venv-0.1.7-py${{ steps.narrator-python.outputs.python-version }}
+
+      - name: Cache narrator model
+        if: steps.done.outputs.skip != 'true'
+        continue-on-error: true
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: chatterbox-model-0.1.7
+
+      - name: Install narrator
+        if: steps.done.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          NARRATOR_PYTHON: ${{ steps.narrator-python.outputs.python-path }}
+        run: |
+          venv="$HOME/chatterbox-venv"
+          if ! "$venv/bin/python" -c "import chatterbox.tts, soundfile" 2>/dev/null; then
+            rm -rf "$venv"   # never cache a half-installed environment
+            "$NARRATOR_PYTHON" -m venv "$venv"
+            # the CPU build of torch: far smaller than the default one, and these machines have no GPU
+            "$venv/bin/pip" install -q chatterbox-tts==0.1.7 "setuptools<81" soundfile --extra-index-url https://download.pytorch.org/whl/cpu \
+              && "$venv/bin/python" -c "import chatterbox.tts, soundfile" || { rm -rf "$venv"; exit 1; }
+          fi
+          echo "CHATTERBOX_PYTHON=$venv/bin/python" >> "$GITHUB_ENV"
 
       - name: Make video
         if: steps.done.outputs.skip != 'true'

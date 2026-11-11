@@ -11,7 +11,7 @@ from .tts import synthesize
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONTS = os.path.join(ROOT, "fonts")
 CHANNEL = "Two Blobs in Love"
-VOICES = ["heart-nova"]  # Kokoro blend (see tts.BLENDS); one narrator so the channel always sounds the same
+VOICES = ["sarah-warm"]  # Chatterbox voice (see tts.CHATTERBOX); one narrator so the channel always sounds the same
 
 
 def produce(script, work, out_path, voice, style="cartoon"):
