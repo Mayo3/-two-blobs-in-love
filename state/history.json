@@ -116,5 +116,16 @@
     "duration": 25.7,
     "hook": "Can the word the predict your future?",
     "question": "Do you two text the same way?"
+  },
+  {
+    "date": "2026-11-11",
+    "fact": "shared-laughter",
+    "format": "try-this",
+    "scene": "park",
+    "voice": "cast",
+    "title": "The laugh that brings you closer",
+    "duration": 21.1,
+    "hook": "Does retelling how you met make you closer?",
+    "question": "Who makes you laugh more, you or them?"
   }
 ]
