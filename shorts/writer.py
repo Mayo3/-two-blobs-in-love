@@ -97,7 +97,10 @@ Reply with JSON only:
   funny), "gasp" (surprised, or a sudden idea), "sigh" (fond or fed up), "groan" (caught being wrong). Two or three in
   a video, where a person really would make one: Bo chuckling before she teases, Pip gasping at the finding or
   groaning when he's wrong, a laugh after the punchline. Never on line 1, never on two lines in a row.
-- "caption": one short natural sentence (under 120 characters) that teases the fact without giving the answer away, no hashtags.
+- "caption": one short natural sentence (under 120 characters), no hashtags. TikTok search reads it, so name the
+  subject in the plain words someone would type ("why couples start to look alike", "holding hands and stress",
+  "who says I love you first"), in the first half of the sentence. Say what the video is about without giving the
+  answer away. No empty teasers: never "find out", "more than you think", "might surprise you", "you need to know".
   In the TikTok caption it comes right after your closing question, so don't repeat the question.
 """
 
@@ -137,6 +140,8 @@ def validate(script, fact, scenes=Scene.kinds):
         problems.append(f"last line longer than {MAX_HOOK_WORDS} words")
     caption = script.get("caption", "").lower()
     problems += [f"caption has banned phrase: '{p}'" for p in BANNED_PHRASES if p in caption]
+    problems += [f"caption has an empty teaser ('{p}'): say what the video is about in searchable words"
+                 for p in ("find out", "more than you think", "surprise you", "need to know") if p in caption]
     for line in lines:
         m = re.search(r"\bthe word (?![\"“'‘]|\*[\"“'‘])\*?(\w+)", line, re.I)
         if m:

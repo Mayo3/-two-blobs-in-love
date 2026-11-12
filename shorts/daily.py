@@ -22,7 +22,22 @@ RECENT_FACTS = 4  # prefer a topic and researcher not seen in this many videos
 def author(fact):
     """Lead researcher's surname, e.g. 'Gottman' from 'Gottman & Silver, ...'."""
     return fact["source"].split(",")[0].split("&")[0].split(" et al")[0].strip()
-HASHTAGS = "#relationshipadvice #couplestips #psychologyfacts #lovefacts #couples"
+# Five hashtags a post (TikTok shows no more): two that say what the channel is, two for the day's
+# subject so the video also reaches people into that, and the channel's own, which gathers the series.
+CORE_TAGS = "#couples #psychologyfacts"
+BRAND_TAG = "#twoblobsinlove"
+TOPIC_TAGS = {
+    "attraction": "#attraction #crush", "dating": "#dating #firstdate", "touch": "#lovelanguage #physicaltouch",
+    "conflict": "#couplefights #communication", "communication": "#communication #relationshiptips",
+    "myth": "#lovemyths #mythbusting", "brain": "#brainfacts #neuroscience", "body": "#sciencefacts #health",
+    "senses": "#attraction #sciencefacts", "humour": "#couplehumor #funnycouple", "novelty": "#datenight #dateideas",
+    "social media": "#socialmedia #relationshiptips", "everyday": "#couplelife #relationshiptips",
+}
+DEFAULT_TOPIC_TAGS = "#relationshiptips #healthyrelationship"
+
+
+def hashtags(fact):
+    return f"{CORE_TAGS} {TOPIC_TAGS.get(fact['topic'], DEFAULT_TOPIC_TAGS)} {BRAND_TAG}"
 
 
 def load_history():
@@ -78,7 +93,7 @@ def scene_options(history):
 def tiktok_caption(script, fact):
     """Leads with the closing question: few viewers reach the end of the video, but everyone sees the caption."""
     question = script["lines"][-1].replace("*", "").strip()
-    return f"{question} {script['caption']} {HASHTAGS}"
+    return f"{question} {script['caption']} {hashtags(fact)}"
 
 
 def source_comment(fact):
