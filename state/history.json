@@ -138,5 +138,16 @@
     "duration": 22.3,
     "hook": "Can a scary bridge make you call?",
     "question": "Would you trust a bridge date?"
+  },
+  {
+    "date": "2026-11-12",
+    "fact": "michelangelo",
+    "format": "try-this",
+    "scene": "home",
+    "voice": "cast",
+    "title": "Sculpting your ideal self together",
+    "duration": 26.3,
+    "hook": "Can your partner help shape your ideal self?",
+    "question": "What's a dream you're chasing?"
   }
 ]
