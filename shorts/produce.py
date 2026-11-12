@@ -26,7 +26,7 @@ def produce(script, work, out_path, voice, style="cartoon"):
     audio = "voice.mp3" if voice.startswith("en-") else "voice.wav"
     spoken = [line.replace("*", "") for line in script["lines"]]
     speakers = script.get("speakers")  # who says each line; scripts without it are narrated
-    words = synthesize(spoken, voice, os.path.join(work, audio), speakers=speakers)
+    words = synthesize(spoken, voice, os.path.join(work, audio), speakers=speakers, sounds=script.get("sounds"))
     duration = audio_duration(os.path.join(work, audio)) + 0.6
     tokens = align(tokenize(script["lines"]), words)
     for t in tokens:

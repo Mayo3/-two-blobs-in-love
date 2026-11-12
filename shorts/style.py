@@ -44,8 +44,8 @@ def check_script(script, fact):
     for s in re.split(r"(?<=[.!?])\s+", text):
         if len(s.split()) > MAX_SENTENCE_WORDS:
             problems.append(f"sentence too long: '{s[:50]}...'")
-    if "!" in text and text.count("!") > 1:
-        problems.append("more than one exclamation mark")
+    if text.count("!") > 3:
+        problems.append("more than three exclamation marks")
     if not any("*" in line for line in script["lines"]):
         problems.append("no *emphasis* marked")
     first = script["lines"][0].replace("*", "")

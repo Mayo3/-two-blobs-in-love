@@ -15,6 +15,7 @@ HOOK_EMPH = "E8436F"  # *highlighted* hook words, readable on the white cloud
 SPEAKER_COLOR = {"pip": "FFB3A6", "bo": "CDBBFF"}
 NAME_TAGS = (("Pip", 316, "FF9A8B"), ("Bo", 764, "B9A3F5"))  # name, x under the blob, colour
 NAME_Y = 1405
+WHO_Y = 1342  # the speaker's name, small, just above the caption line
 STAT_Y = 520  # big number that pops above the couple when the narrator says it
 STAT_HOLD = 2.6  # seconds a big number stays up
 MAX_WORDS_PER_CHUNK = 3
@@ -175,6 +176,21 @@ def stat_pops(tokens, start, end):
         elif nxt and nxt["emph"] and nxt["line"] == t["line"] and not t["text"][-1] in ".,!?:;":
             text += " " + nxt["text"].strip(".,!?:;*\"'")  # "517 couples", "36 questions"
         pops.append({"start": t["start"], "text": text})
+    if not pops:
+        # no number to show: the last short phrase the script stresses is the point of the video
+        spans, cur = [], None
+        for t in tokens:
+            if t["emph"] and start <= t["start"] < end and (cur is None or cur["line"] == t["line"]):
+                cur = cur or {"start": t["start"], "line": t["line"], "words": []}
+                cur["words"].append(t["text"].strip(".,!?:;\"'…"))
+            elif cur:
+                spans.append(cur)
+                cur = None
+        if cur:
+            spans.append(cur)
+        spans = [s for s in spans if len(s["words"]) <= 3 and len(" ".join(s["words"])) <= 16]
+        if spans:
+            pops.append({"start": spans[-1]["start"], "text": " ".join(spans[-1]["words"])})
     for i, p in enumerate(pops):
         nxt = pops[i + 1]["start"] if i + 1 < len(pops) else end
         p["end"] = min(nxt, p["start"] + STAT_HOLD, end)
@@ -234,6 +250,7 @@ Style: Label,DM Serif Display,54,{white},{white},{ass_color('3b2340')},{shadow},
 Style: Headline,DM Serif Display,150,{emph},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,7,6,5,90,90,0,1
 Style: Title,DM Serif Display,104,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,6,6,5,90,90,0,1
 Style: Hook,Fredoka SemiBold,76,{ass_color('3b2340')},{ass_color('3b2340')},{white},{ass_color('000000', 'FF')},0,0,0,0,100,100,0,0,1,0,0,5,90,90,0,1
+Style: Who,Fredoka SemiBold,68,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,5,2,5,0,0,0,1
 Style: Name,Fredoka SemiBold,76,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,6,3,5,0,0,0,1
 Style: Source,DM Serif Display,34,{white},{white},{ass_color('3b2340')},{shadow},0,1,0,0,100,100,0,0,1,4,2,8,90,90,370,1
 
@@ -261,6 +278,16 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         grow = f"\\fs{230 if len(p['text']) <= 4 else 150}\\fad(0,180)\\fscx60\\fscy60\\t(0,140,\\fscx108\\fscy108)\\t(140,240,\\fscx100\\fscy100)"
         ev.append(f"Dialogue: 2,{ts(p['start'])},{ts(p['end'])},Headline,,0,0,0,,{{\\pos({W // 2},{STAT_Y}){grow}}}{esc(p['text'])}")
     tokens = [t for t in tokens if not (hook_end and t["line"] == 0) and not (outro_start and t["line"] == last)]
+    if cast:  # a small name above the captions for as long as each one talks
+        starts = {}
+        for t in tokens:
+            starts.setdefault(t["line"], t["start"])
+        order = sorted(starts)
+        for i, li in enumerate(order):
+            who = next(t["who"] for t in tokens if t["line"] == li)
+            end = starts[order[i + 1]] if i + 1 < len(order) else (outro_start or duration)
+            if who in SPEAKER_COLOR and end - starts[li] > 0.2:
+                ev.append(f"Dialogue: 1,{ts(starts[li])},{ts(end)},Who,,0,0,0,,{{\\pos({W // 2},{WHO_Y})\\c{ass_color(SPEAKER_COLOR[who])}}}{who.capitalize()}")
 
     chunks = chunk(tokens)
     for ci, ch in enumerate(chunks):

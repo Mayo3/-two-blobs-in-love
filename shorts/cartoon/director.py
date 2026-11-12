@@ -22,6 +22,8 @@ FOCUS = (540, GROUND - 230)  # camera zooms around the couple's faces
 CLOSE_UP = 0.07  # extra zoom on every other beat
 PUSH_IN = 0.025  # slow zoom over the length of a beat
 GLIDE = 2.5  # how quickly the camera eases to a new framing
+SPEAKER_PAN = 38  # in a dialogue the camera drifts this far toward whoever is talking
+SPEAKER_ZOOM = 0.04  # and a touch closer
 BOUNCE = 0.28  # seconds of squash-and-stretch when a beat starts
 HOOK_CLOUD = 232  # size of the cloud behind the hook title
 OPENING_HOP = 0.7  # seconds both blobs hop at the start
@@ -73,9 +75,21 @@ class Animator:
         self.monitor = 0.3
         self.monitor_t = 0.3
         self.zoom = 1.0
+        self.pan = 0.0
+        # (start, end, who) of each spoken line, for the camera
+        self.turns = []
+        for w in self.words:
+            if self.turns and self.turns[-1][3] == w["line"]:
+                self.turns[-1][1] = w["end"]
+            else:
+                self.turns.append([w["start"], w["end"], w.get("who"), w["line"]])
 
     def frame(self, ctx, t, dt):
         A, B, S = self.A, self.B, self.S
+        if len(self.beats) > 1 and t >= self.beats[-1]["start"]:
+            # a gag that stays (twins, old age) ends before the closing line, so they are themselves again
+            for blob in (A, B):
+                blob.persist["old"] = blob.persist["mix"] = 0.0
         A.reset(AX)
         B.reset(BX)
         S.reset(OFFSTAGE)
@@ -83,6 +97,7 @@ class Animator:
         S.tgt["look_x"] = -0.5
         self.monitor_t = 0.3
         self.back, self.front = [], []
+        self.now = t
         index, lt, dur = 0, t, 1.0
         for index, b in enumerate(self.beats):
             if b["start"] <= t < b["end"] or (b is self.beats[-1] and t >= b["start"]):
@@ -172,12 +187,25 @@ class Animator:
             self.front.append(lambda ctx: P.sparkles(ctx, sparkle, 540, 1250, spread=300))
 
     def camera(self, ctx, dt, index, lt, dur):
-        """Calm framing: every other beat glides to a closer shot, and each beat pushes in slowly."""
-        target = 1 + (CLOSE_UP if index % 2 else 0) + PUSH_IN * clamp(lt / max(dur, 0.01))
-        self.zoom += (target - self.zoom) * (1 - math.exp(-GLIDE * dt))
+        """Calm framing: every other beat glides to a closer shot, and each beat pushes in slowly.
+        In a dialogue the camera instead drifts toward whoever is talking, like a conversation scene."""
+        t = self.now
+        who = next((w for s, e, w, _ in self.turns if s - 0.15 <= t < e + 0.25), None)
+        side = {"pip": -1, "bo": 1}.get(who, 0)
+        if any(c["start"] <= t < c["end"] for c in self.clouds):
+            side = 0  # the hook and the closing question are for the viewer: both in the middle
+        apart = self.B.tgt["x"] - self.A.tgt["x"] > 400 or OFFSTAGE in (self.A.tgt["x"], self.B.tgt["x"])
+        if apart:  # they stand far apart or one has walked off: a wide, centred shot keeps both whole
+            side, close = 0, 0.0
+        else:
+            close = SPEAKER_ZOOM if side else (CLOSE_UP if index % 2 and not any(w for _, _, w, _ in self.turns) else 0)
+        target = 1 + close + PUSH_IN * clamp(lt / max(dur, 0.01))
+        k = 1 - math.exp(-GLIDE * dt)
+        self.zoom += (target - self.zoom) * k
+        self.pan += (side * SPEAKER_PAN - self.pan) * k
         ctx.translate(*FOCUS)
         ctx.scale(self.zoom, self.zoom)
-        ctx.translate(-FOCUS[0], -FOCUS[1])
+        ctx.translate(-FOCUS[0] - self.pan, -FOCUS[1])
 
     # helpers used by actions
     def look_at_each_other(self, amount=0.85):

@@ -12,6 +12,11 @@ from .llm import chat_json
 from .produce import ROOT
 from .style import BANNED_PHRASES, MAX_HOOK_WORDS, MAX_SENTENCE_WORDS, MAX_WORDS, MIN_WORDS, STUDY_WORDS, check_script
 
+# actions that put nothing where the hook's cloud sits; line 1 gets "idle" if the writer picks another
+HOOK_SAFE = {"idle", "wave", "turn_toward", "hold_hands", "hug", "calm", "date", "sniff", "texting", "far_apart",
+             "twin", "unmatch", "old", "young", "alone", "stranger", "watched"}
+STIFF = re.compile(r"\b(let us|I am|you are|we are|they are)\b(?= \w)", re.I)  # nobody says these out loud
+
 FORMATS = {
     "reveal": "Pip wonders about something; Bo gives the finding straight, then the detail that makes it surprising.",
     "myth-vs-fact": "Pip states the popular belief, sure of himself; Bo overturns it with the finding.",
@@ -30,11 +35,16 @@ Never preachy, never salesy, never generic.
 
 Every script has this shape:
 1. the hook (see below),
-2. the answer or the belief, in one or two quick exchanges,
-3. the finding, with the odd concrete thing people in the study actually did or that was measured
-   (were tied wrist to wrist, sniffed T-shirts, held a hand while waiting for a shock): this is what makes it stick,
-4. what it means for the two of them: one line, a joke or a plan,
-5. the closing question to the viewer.
+2. Pip's guess or belief: confident, and wrong or only half right,
+3. Bo does NOT answer yet. She teases him, or starts on the odd concrete thing people in the study actually did
+   or that was measured (were tied wrist to wrist, sniffed T-shirts, held a hand while waiting for a shock).
+   The viewer must still be wondering who is right,
+4. the finding: it lands in the second half of the script, never in Bo's first reply. A reply like "It really can."
+   straight after the hook kills the video: there is nothing left to wait for,
+5. Pip's punchline: one line that could only follow this fact, a joke at his own cost or a plan for the two of them
+   ("So I should point at more birds."), not a general remark,
+6. the closing question to the viewer.
+They talk the way people talk: always "let's", "I'm", "you're", "don't", "that's", never "let us", "I am", "you are".
 
 Audience: mostly 18 to 34, dating or in their first serious relationships. Don't assume they are married:
 say "married couples", "newlyweds", "husband" or "divorce" only when describing who was studied.
@@ -64,7 +74,9 @@ Hard rules:
 - The last line is said to the viewer, not to each other, with no names in it: a question the viewer can answer in a word or two (yes or no, this or that, A or B), so they reply in the comments. Never "follow for more" or "comment below".
   At most {MAX_HOOK_WORDS} words: it is shown whole on screen, like the hook. Best is one that splits people or makes them
   tell on themselves or their partner ("Who falls asleep first, you or them?"), not one everybody answers the same way.
-- At most one exclamation mark. No emojis. No hashtags in the script.
+- They react like people: "Wait, what?", "No way.", "Ha!", "Ohh.", "Hmm.", "Pfff." A reaction of one to three
+  words is a fine line of its own, and a question may be a real, surprised question. At most three exclamation
+  marks. No emojis. No hashtags in the script.
 - Never use these words or phrases: {", ".join(BANNED_PHRASES)}.
 
 Cartoon: for every line pick an action (or a list of 2-3 actions that split the line) from this list.
@@ -74,11 +86,17 @@ A is Pip and B is Bo. The one speaking moves their mouth by themselves. Pick act
 Palettes (caption highlight colours): {", ".join(PALETTES)}.
 
 Reply with JSON only:
-{{"hooks": ["...", "...", "..."], "title": "...", "scene": "...", "palette": "...", "speakers": ["pip" or "bo", ...], "lines": ["..."], "beats": ["action" or ["action", "action"], ...], "caption": "..."}}
-- "hooks": write these first: three different candidates for line 1, each from another angle. Then use the one a
-  bored stranger is least able to scroll past as line 1.
+{{"hooks": [{{"hook": "...", "a_stranger_would_guess": "...", "the_truth": "..."}}, ...], "title": "...", "scene": "...", "palette": "...", "speakers": ["pip" or "bo", ...], "sounds": [null or "chuckle" ..., ...], "lines": ["..."], "beats": ["action" or ["action", "action"], ...], "caption": "..."}}
+- "hooks": write these first: three different candidates for line 1, each from another angle. For each, write the
+  answer a stranger would guess in one second, and the truth. Line 1 must be a hook whose guess is wrong, or that
+  nobody can guess. If the stranger's guess is simply right ("yes, of course"), throw that hook away.
+- The action for line 1 must leave the space above their heads free for the hook: one of {", ".join(sorted(HOOK_SAFE))}.
 - "title": under 40 characters, a punchy name for the video (used in notifications and the history).
-- "speakers" and "beats" have exactly one entry per line.
+- "speakers", "sounds" and "beats" have exactly one entry per line.
+- "sounds": a sound the speaker makes just before a line, or null: "chuckle" (teasing, amused), "laugh" (it really is
+  funny), "gasp" (surprised, or a sudden idea), "sigh" (fond or fed up), "groan" (caught being wrong). Two or three in
+  a video, where a person really would make one: Bo chuckling before she teases, Pip gasping at the finding or
+  groaning when he's wrong, a laugh after the punchline. Never on line 1, never on two lines in a row.
 - "caption": one short natural sentence (under 120 characters) that teases the fact without giving the answer away, no hashtags.
   In the TikTok caption it comes right after your closing question, so don't repeat the question.
 """
@@ -86,7 +104,7 @@ Reply with JSON only:
 
 def examples():
     samples = json.load(open(os.path.join(ROOT, "samples", "scripts.json"), encoding="utf-8"))
-    keep = ("title", "scene", "palette", "speakers", "lines", "beats")
+    keep = ("title", "scene", "palette", "speakers", "sounds", "lines", "beats")
     return "\n\n".join(
         f"Example ({s['format']}):\n" + json.dumps({k: s[k] for k in keep}, ensure_ascii=False) for s in samples
     )
@@ -123,6 +141,10 @@ def validate(script, fact, scenes=Scene.kinds):
         m = re.search(r"\bthe word (?![\"“'‘]|\*[\"“'‘])\*?(\w+)", line, re.I)
         if m:
             problems.append(f'put the word in double quotes: the word "{m.group(1)}"')
+    for line in lines:
+        m = STIFF.search(line.replace("*", ""))
+        if m:
+            problems.append(f"'{m.group(1)}' sounds stiff: use the contraction, as people do when they talk")
     if not script.get("title") or len(script["title"]) > 45:
         problems.append("title missing or too long")
     if "#" in script.get("caption", ""):
@@ -148,6 +170,10 @@ def write_script(fact, fmt, scenes=Scene.kinds, tries=3):
         )
         script = chat_json(SYSTEM, prompt, temperature=0.8 if attempt == 0 else 0.6)
         script["title"] = str(script.get("title", "")).replace("*", "")
+        beats = script.get("beats") or [None]
+        first = beats[0][0] if isinstance(beats[0], list) and beats[0] else beats[0]
+        if isinstance(first, str) and first.partition(":")[0] not in HOOK_SAFE:
+            beats[0] = "idle"  # e.g. a thought bubble would sit half hidden under the hook
         script["fact"], script["format"] = fact["id"], fmt
         problems = validate(script, fact, scenes)
         if not problems:

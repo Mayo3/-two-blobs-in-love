@@ -52,6 +52,17 @@
       "couple laughing",
       "couple walking park",
       "couple coffee"
+    ],
+    "sounds": [
+      null,
+      null,
+      "chuckle",
+      null,
+      null,
+      null,
+      null,
+      "gasp",
+      "laugh"
     ]
   },
   {
@@ -74,7 +85,7 @@
     ],
     "lines": [
       "Whose hand calms your brain *the most*?",
-      "Depends who is holding it.",
+      "Depends who's holding it.",
       "A hand is a hand.",
       "Married women were told a small shock might come. Alone, their brains braced for it.",
       "And holding a stranger's hand?",
@@ -107,6 +118,17 @@
       "couple laughing",
       "couple walking park",
       "couple coffee"
+    ],
+    "sounds": [
+      null,
+      "chuckle",
+      null,
+      null,
+      null,
+      null,
+      null,
+      "gasp",
+      null
     ]
   },
   {
@@ -124,7 +146,6 @@
       "bo",
       "bo",
       "pip",
-      "bo",
       "bo"
     ],
     "lines": [
@@ -133,9 +154,8 @@
       "A famous study agreed with you.",
       "Told you.",
       "Then photos of *517 couples* were compared, early on and 20 to 69 years later.",
-      "They did *not* grow more alike.",
-      "So why do old couples match?",
-      "They looked similar *from the very start*.",
+      "They did *not* grow more alike. They looked similar *from the very start*.",
+      "So I fell for my own face. Classic.",
       "So, do you two look alike?"
     ],
     "beats": [
@@ -151,11 +171,7 @@
         "compare"
       ],
       "young",
-      "shrug",
-      [
-        "twin",
-        "unmatch"
-      ],
+      "twin",
       "ask_viewer"
     ],
     "footage": [
@@ -166,8 +182,17 @@
       "happy elderly couple",
       "couple apartment relaxing",
       "couple laughing",
-      "couple walking park",
-      "couple coffee"
+      "couple walking park"
+    ],
+    "sounds": [
+      null,
+      null,
+      null,
+      "laugh",
+      null,
+      null,
+      "groan",
+      "chuckle"
     ]
   }
 ]

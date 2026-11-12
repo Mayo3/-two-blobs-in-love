@@ -14,8 +14,8 @@ You post it on TikTok yourself (about 30 seconds; add a trending sound). That's 
 
 Everything is free: GitHub Actions, Gemini free tier, Chatterbox and Kokoro (open-source voices), ntfy.
 
-Pip and Bo speak with Chatterbox, which reads with feeling, in voices copied from `voices/pip.wav` and
-`voices/sarah.wav` (both synthetic voices). It is a 3 GB model that needs about 5-15 minutes a video on GitHub's
+Pip and Bo speak with Chatterbox Turbo, which can chuckle, laugh, gasp and sigh, in voices copied from `voices/pip.wav` and
+`voices/sarah.wav` (both synthetic voices). It is a 4 GB model that needs about 5-15 minutes a video on GitHub's
 machines; if it can't run, two Kokoro voices speak instead and the phone notification says `cast-kokoro`.
 
 ## Setup
