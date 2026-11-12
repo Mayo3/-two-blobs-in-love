@@ -127,5 +127,16 @@
     "duration": 21.1,
     "hook": "Does retelling how you met make you closer?",
     "question": "Who makes you laugh more, you or them?"
+  },
+  {
+    "date": "2026-11-12",
+    "fact": "bridge",
+    "format": "quiz",
+    "scene": "snow",
+    "voice": "cast",
+    "title": "The bridge that makes men call",
+    "duration": 22.3,
+    "hook": "Can a scary bridge make you call?",
+    "question": "Would you trust a bridge date?"
   }
 ]
