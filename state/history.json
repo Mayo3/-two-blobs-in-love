@@ -149,5 +149,16 @@
     "duration": 26.3,
     "hook": "Can your partner help shape your ideal self?",
     "question": "What's a dream you're chasing?"
+  },
+  {
+    "date": "2026-11-13",
+    "fact": "positive-illusions",
+    "format": "reveal",
+    "scene": "night",
+    "voice": "cast",
+    "title": "The power of seeing your partner positively",
+    "duration": 22.9,
+    "hook": "Who knows your flaws best?",
+    "question": "Who is more positive?"
   }
 ]
