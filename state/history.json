@@ -160,5 +160,16 @@
     "duration": 22.9,
     "hook": "Who knows your flaws best?",
     "question": "Who is more positive?"
+  },
+  {
+    "date": "2026-11-14",
+    "fact": "we-talk",
+    "format": "reveal",
+    "scene": "lab",
+    "voice": "cast",
+    "title": "The pronoun that predicts love",
+    "duration": 26.9,
+    "hook": "Can a single word predict your future?",
+    "question": "Do you say \"we\" or \"I\" more when you argue?"
   }
 ]
