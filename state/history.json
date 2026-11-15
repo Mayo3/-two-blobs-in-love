@@ -171,5 +171,16 @@
     "duration": 26.9,
     "hook": "Can a single word predict your future?",
     "question": "Do you say \"we\" or \"I\" more when you argue?"
+  },
+  {
+    "date": "2026-11-15",
+    "fact": "gratitude",
+    "format": "try-this",
+    "scene": "cafe",
+    "voice": "cast",
+    "title": "The next-day thank you boost",
+    "duration": 24.5,
+    "hook": "Can a simple thank you change tomorrow?",
+    "question": "Who says thank you more, you or them?"
   }
 ]
