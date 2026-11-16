@@ -182,5 +182,22 @@
     "duration": 24.5,
     "hook": "Can a simple thank you change tomorrow?",
     "question": "Who says thank you more, you or them?"
+  },
+  {
+    "date": "2026-11-16",
+    "fact": "hugs",
+    "format": "quiz",
+    "scene": "rain",
+    "voice": "cast",
+    "title": "Can hugs stop you from getting sick?",
+    "duration": 22.1,
+    "music": "01-rhodes.mp3",
+    "hook": "Can a daily hug keep the doctor away?",
+    "question": "How many hugs do you get a day?",
+    "posted": {
+      "youtube": "paOIaPODdjY",
+      "instagram": "18121529761988640",
+      "facebook": "failed"
+    }
   }
 ]
