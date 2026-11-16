@@ -1,3 +1,4 @@
+
 """The daily job: pick a fact, write a script, render the video, record it in history.
 
 Usage: python -m shorts.daily [--date YYYY-MM-DD] [--script file.json]
@@ -22,16 +23,26 @@ RECENT_FACTS = 4  # prefer a topic and researcher not seen in this many videos
 def author(fact):
     """Lead researcher's surname, e.g. 'Gottman' from 'Gottman & Silver, ...'."""
     return fact["source"].split(",")[0].split("&")[0].split(" et al")[0].strip()
-# Five hashtags a post (TikTok shows no more): two that say what the channel is, two for the day's
-# subject so the video also reaches people into that, and the channel's own, which gathers the series.
+
+
+# Five hashtags a post (TikTok shows no more): two that say what the channel is,
+# two for the day's subject, and the channel's own.
 CORE_TAGS = "#couples #psychologyfacts"
 BRAND_TAG = "#twoblobsinlove"
 TOPIC_TAGS = {
-    "attraction": "#attraction #crush", "dating": "#dating #firstdate", "touch": "#lovelanguage #physicaltouch",
-    "conflict": "#couplefights #communication", "communication": "#communication #relationshiptips",
-    "myth": "#lovemyths #mythbusting", "brain": "#brainfacts #neuroscience", "body": "#sciencefacts #health",
-    "senses": "#attraction #sciencefacts", "humour": "#couplehumor #funnycouple", "novelty": "#datenight #dateideas",
-    "social media": "#socialmedia #relationshiptips", "everyday": "#couplelife #relationshiptips",
+    "attraction": "#attraction #crush",
+    "dating": "#dating #firstdate",
+    "touch": "#lovelanguage #physicaltouch",
+    "conflict": "#couplefights #communication",
+    "communication": "#communication #relationshiptips",
+    "myth": "#lovemyths #mythbusting",
+    "brain": "#brainfacts #neuroscience",
+    "body": "#sciencefacts #health",
+    "senses": "#attraction #sciencefacts",
+    "humour": "#couplehumor #funnycouple",
+    "novelty": "#datenight #dateideas",
+    "social media": "#socialmedia #relationshiptips",
+    "everyday": "#couplelife #relationshiptips",
 }
 DEFAULT_TOPIC_TAGS = "#relationshiptips #healthyrelationship"
 
@@ -60,25 +71,59 @@ def pick(history, today):
     last = {}
     for h in history:
         last[h["fact"]] = max(last.get(h["fact"], ""), h["date"])
+
     cutoff = (today - dt.timedelta(days=REUSE_AFTER_DAYS)).isoformat()
+
     facts = [f for f in FACTS if f["verified"]]
     fresh = [f for f in facts if f["id"] not in last]
-    stale = sorted((f for f in facts if f["id"] in last and last[f["id"]] <= cutoff), key=lambda f: last[f["id"]])
+
+    stale = sorted(
+        (f for f in facts if f["id"] in last and last[f["id"]] <= cutoff),
+        key=lambda f: last[f["id"]],
+    )
+
     if not fresh and not stale:
-        raise SystemExit("Fact bank exhausted: every fact was used in the last %d days. Add facts to shorts/facts.py." % REUSE_AFTER_DAYS)
-    # vary the subject: skip facts whose topic or researcher featured in the last few videos
-    recent = [FACT_BY_ID[h["fact"]] for h in history[-RECENT_FACTS:] if h["fact"] in FACT_BY_ID]
-    topics, authors = {f["topic"] for f in recent}, {author(f) for f in recent}
+        raise SystemExit(
+            "Fact bank exhausted: every fact was used in the last %d days. "
+            "Add facts to shorts/facts.py." % REUSE_AFTER_DAYS
+        )
+
+    # Vary the subject: skip facts whose topic or researcher featured
+    # in the last few videos.
+    recent = [
+        FACT_BY_ID[h["fact"]]
+        for h in history[-RECENT_FACTS:]
+        if h["fact"] in FACT_BY_ID
+    ]
+
+    topics = {f["topic"] for f in recent}
+    authors = {author(f) for f in recent}
+
     pool = fresh or stale
-    pool.sort(key=lambda f: (f["topic"] in topics) + (author(f) in authors))  # stable: keeps bank order on ties
+    pool.sort(
+        key=lambda f: (f["topic"] in topics) + (author(f) in authors)
+    )
+
     fact = pool[0]
 
-    used_for_fact = {h["format"] for h in history if h["fact"] == fact["id"]}
+    used_for_fact = {
+        h["format"] for h in history if h["fact"] == fact["id"]
+    }
+
     if fact["topic"] == "myth" and "myth-vs-fact" not in used_for_fact:
         return fact, "myth-vs-fact"
-    options = [f for f in FORMATS if f != "myth-vs-fact" and f not in used_for_fact] or [f for f in FORMATS if f != "myth-vs-fact"]
+
+    options = [
+        f for f in FORMATS
+        if f != "myth-vs-fact" and f not in used_for_fact
+    ] or [
+        f for f in FORMATS
+        if f != "myth-vs-fact"
+    ]
+
     recent = [h["format"] for h in history[-len(FORMATS):]]
-    options.sort(key=lambda f: recent.count(f))  # rotate formats across days
+    options.sort(key=lambda f: recent.count(f))
+
     return fact, options[0]
 
 
@@ -87,7 +132,10 @@ def scene_options(history):
     from .cartoon.scenes import Scene
 
     recent = {h.get("scene") for h in history[-RECENT_SCENES:]}
-    return [k for k in Scene.kinds if k not in recent] or list(Scene.kinds)
+
+    return [
+        k for k in Scene.kinds if k not in recent
+    ] or list(Scene.kinds)
 
 
 def tiktok_caption(script, fact):
@@ -105,8 +153,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", default=dt.date.today().isoformat())
     ap.add_argument("--script")
+
     args = ap.parse_args()
     today = dt.date.fromisoformat(args.date)
+
     history = load_history()
 
     if args.script:
@@ -114,51 +164,116 @@ def main():
         fact = FACT_BY_ID[script["fact"]]
         script.setdefault("format", "reveal")
         script.setdefault("caption", script["title"])
+
     else:
         from .writer import write_script
+
         fact, fmt = pick(history, today)
+
         print(f"fact: {fact['id']}  format: {fmt}")
+
         scenes = scene_options(history)
         print(f"scenes: {', '.join(scenes)}")
+
         script = write_script(fact, fmt, scenes)
 
     voice = VOICES[len(history) % len(VOICES)]
+
     name = f"{today.isoformat()}-{fact['id']}"
     out_dir = os.path.join(ROOT, "out", today.isoformat())
+
     video = os.path.join(out_dir, f"{name}.mp4")
-    duration = produce(script, os.path.join(ROOT, "build", name), video, voice)
+
+    duration = produce(
+        script,
+        os.path.join(ROOT, "build", name),
+        video,
+        voice,
+    )
+
     from . import tts
-    voice = tts.LAST_VOICE or voice  # the backup voice, if the main one could not be used
-    # a copy with soft background music for the platforms it is posted to automatically; TikTok keeps the
-    # plain one so a trending sound can be added there
-    from .music import add_music, pick
-    track = pick(len(history))
+
+    voice = tts.LAST_VOICE or voice  # backup voice if the main one could not be used
+
+    # A copy with soft background music for the platforms it is posted to automatically.
+    # TikTok keeps the plain one so a trending sound can be added there.
+    from .music import add_music, pick as pick_music
+
+    track = pick_music(len(history))
+
     video_music = None
+
     if track:
         try:
-            video_music = add_music(video, track, video[:-4] + "-music.mp4", seed=name)
-        except Exception as e:  # never lose the day's video over the music
-            print(f"music could not be added ({e}); the other platforms get the plain video")
+            video_music = add_music(
+                video,
+                track,
+                video[:-4] + "-music.mp4",
+                seed=name,
+            )
+        except Exception as e:
+            print(
+                f"music could not be added ({e}); "
+                "the other platforms get the plain video"
+            )
 
     meta = {
-        "date": today.isoformat(), "fact": fact["id"], "format": script["format"], "scene": script["scene"], "voice": voice,
-        "title": script["title"], "caption": tiktok_caption(script, fact), "comment": source_comment(fact), "source": fact["source"],
-        "video": video, "duration": round(duration, 1), "script": script,
-        "video_music": video_music, "music": os.path.basename(track) if video_music else None,
+        "date": today.isoformat(),
+        "fact": fact["id"],
+        "format": script["format"],
+        "scene": script["scene"],
+        "voice": voice,
+        "title": script["title"],
+        "caption": tiktok_caption(script, fact),
+        "comment": source_comment(fact),
+        "source": fact["source"],
+        "video": video,
+        "duration": round(duration, 1),
+        "script": script,
+        "video_music": video_music,
+        "music": os.path.basename(track) if video_music else None,
     }
+
     meta_path = os.path.join(out_dir, "meta.json")
+
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
-    # hook, question and length are kept so TikTok's numbers can later be set against what each video opened with
-    history.append({**{k: meta[k] for k in ("date", "fact", "format", "scene", "voice", "title", "duration", "music")},
-                    "hook": script["lines"][0].replace("*", ""), "question": script["lines"][-1].replace("*", "")})
+
+    # Hook, question and length are kept so TikTok's numbers can later
+    # be set against what each video opened with.
+    history.append({
+        **{
+            k: meta[k]
+            for k in (
+                "date",
+                "fact",
+                "format",
+                "scene",
+                "voice",
+                "title",
+                "duration",
+                "music",
+            )
+        },
+        "hook": script["lines"][0].replace("*", ""),
+        "question": script["lines"][-1].replace("*", ""),
+    })
+
     save_history(history)
-    print(f"{video}  ({duration:.1f}s)\n{meta['caption']}\n{meta['comment']}")
+
+    print(
+        f"{video}  ({duration:.1f}s)\n"
+        f"{meta['caption']}\n"
+        f"{meta['comment']}"
+    )
 
     gh_out = os.environ.get("GITHUB_OUTPUT")
+
     if gh_out:
         with open(gh_out, "a", encoding="utf-8") as f:
-            f.write(f"video={video}\nmeta={meta_path}\ndate={today.isoformat()}\n")
+            f.write(f"video={video}\n")
+            f.write(f"meta={meta_path}\n")
+            f.write(f"date={today.isoformat()}\n")
 
 
 if __name__ == "__main__":
