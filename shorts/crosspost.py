@@ -164,12 +164,19 @@ def facebook(meta):
 def login_meta():
     """Turns a short-lived user token (from the Graph API Explorer) into a Page token that does not expire."""
     api = f"https://graph.facebook.com/{GRAPH}"
-    app_id = input("Meta app ID: ").strip()
-    app_secret = input("Meta app secret: ").strip()
-    short = input("User token from the Graph API Explorer: ").strip()
-    long_user = check(requests.get(f"{api}/oauth/access_token", timeout=TIMEOUT, params={
-        "grant_type": "fb_exchange_token", "client_id": app_id, "client_secret": app_secret,
-        "fb_exchange_token": short}))["access_token"]
+    token = input("User token (from the Graph API Explorer, or already extended in the Access Token Debugger): ").strip()
+    app_id = input("Meta app ID (press Enter if the token is already extended): ").strip()
+    if app_id:
+        app_secret = input("Meta app secret: ").strip()
+        token = check(requests.get(f"{api}/oauth/access_token", timeout=TIMEOUT, params={
+            "grant_type": "fb_exchange_token", "client_id": app_id, "client_secret": app_secret,
+            "fb_exchange_token": token}))["access_token"]
+    long_user = token
+    expires = check(requests.get(f"{api}/debug_token", timeout=TIMEOUT, params={
+        "input_token": long_user, "access_token": long_user})).get("data", {}).get("expires_at", 0)
+    if expires and expires - time.time() < 7 * 86400:
+        raise SystemExit("That token is short-lived, so the Page token would expire too. Extend it first "
+                         "(Access Token Debugger -> Extend Access Token) or give the app ID and secret.")
     pages = check(requests.get(f"{api}/me/accounts", timeout=TIMEOUT, params={
         "fields": "id,name,access_token,instagram_business_account", "access_token": long_user}))["data"]
     if not pages:
