@@ -25,8 +25,10 @@ import time
 import requests
 
 from .daily import load_history, save_history
+from .produce import ROOT
 
-GRAPH = "v24.0"  # Meta Graph API version; Meta retires each about two years after release
+PAUSED = os.path.join(ROOT, "state", "crosspost-paused")  # while this file exists, nothing is posted
+GRAPH ="v24.0"  # Meta Graph API version; Meta retires each about two years after release
 TIMEOUT = 120
 
 
@@ -212,6 +214,9 @@ def main(argv):
     ap.add_argument("--youtube-privacy", default="public", choices=["public", "unlisted", "private"])
     args = ap.parse_args(argv)
 
+    if os.path.exists(PAUSED):
+        print(f"cross-posting paused: delete {os.path.relpath(PAUSED, ROOT)} to switch it back on")
+        return
     meta = json.load(open(args.meta, encoding="utf-8"))
     posted = meta.get("posted", {})
     for name in args.only.split(","):
