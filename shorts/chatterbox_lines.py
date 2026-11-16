@@ -3,7 +3,7 @@ environment Chatterbox is installed in (it needs other package versions than the
 
     python chatterbox_lines.py job.json
 
-job.json: {"lines": [...], "refs": [voice clip per line], "out": dir}
+job.json: {"lines": [...], "refs": [voice clip per line], "out": dir, "temperature": 0.8}
 A line may start with a sound in square brackets that Turbo acts out: "[chuckle] That was a bid."
 Writes 00.wav, 01.wav, ... into `out`. Imports nothing from the project.
 """
@@ -46,7 +46,7 @@ def main():
         model.conds = copied[ref]
         for attempt in range(TRIES):
             torch.manual_seed(seed + n * 10 + attempt)
-            wav = model.generate(line).squeeze().numpy()
+            wav = model.generate(line, temperature=job.get("temperature", 0.8)).squeeze().numpy()
             seconds = len(wav) / model.sr
             if plausible(seconds, line):
                 break

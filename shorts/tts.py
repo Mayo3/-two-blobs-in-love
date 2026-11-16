@@ -47,6 +47,7 @@ NARRATOR = "bo"  # speaks any line that has no speaker
 SOUNDS = ("chuckle", "laugh", "gasp", "sigh", "groan")
 SOUND_WEIGHT = 9  # how long a sound lasts, counted in letters of speech, for timing the words after it
 CHATTERBOX_TIMEOUT = 25 * 60  # seconds; on a 4-core machine a video's speech takes roughly 5-15 minutes
+TEMPERATURE = 0.8  # how freely Chatterbox acts a line (its own default); a channel may raise it for livelier, less even reading
 LAST_VOICE = None  # the voice the last synthesize() call really used: "cast", or "cast-kokoro" for the backups
 
 _kokoro = None
@@ -201,7 +202,7 @@ def _chatterbox_audio(lines, who, sounds):
         job = os.path.join(tmp, "job.json")
         with open(job, "w", encoding="utf-8") as f:
             acted = [f"[{s}] {line}" if s else line for line, s in zip(lines, sounds)]
-            json.dump({"lines": acted, "refs": [CAST[w]["ref"] for w in who], "out": tmp}, f)
+            json.dump({"lines": acted, "refs": [CAST[w]["ref"] for w in who], "out": tmp, "temperature": TEMPERATURE}, f)
         script = os.path.join(ROOT, "shorts", "chatterbox_lines.py")
         subprocess.run([exe, script, job], check=True, timeout=CHATTERBOX_TIMEOUT, env=env, stdout=sys.stderr)
         out = []

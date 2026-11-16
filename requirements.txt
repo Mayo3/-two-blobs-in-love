@@ -3,5 +3,6 @@ kokoro-onnx
 soundfile
 numpy
 pycairo
+pillow
 requests
 imageio-ffmpeg; platform_system == "Windows"

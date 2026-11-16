@@ -225,17 +225,25 @@ def headlines(tokens, title, duration):
     return [it for it in items if it["end"] - it["start"] > 0.3]
 
 
-def build_ass(tokens, duration, palette, series_label, title="", big_text=False, hook_end=None, outro_start=None, cast=False):
+def build_ass(tokens, duration, palette, series_label, title="", big_text=False, hook_end=None, outro_start=None, cast=False,
+              speaker_colors=None, font=None):
     """big_text: title, then every *emphasis* phrase in big letters. hook_end: the spoken
     first line sits in the cloud until this time and is left out of the captions, so the
     opening seconds carry one message that is read and heard at once. outro_start: from
     this time the closing question sits in the cloud the same way, whole, until the video
-    ends, so it can be read and answered, and the loop back to the hook is cloud to cloud."""
+    ends, so it can be read and answered, and the loop back to the hook is cloud to cloud.
+    speaker_colors: {speaker: hex} for a channel with its own cast; it draws its own name tags,
+    so the Pip and Bo tags, the name above the captions and the big numbers are left out.
+    font: one typeface for the captions, the channel name and the hook, for a channel with its own look."""
+    own_cast = speaker_colors is not None
+    speaker_colors = speaker_colors if own_cast else SPEAKER_COLOR
     pal = PALETTES[palette]
     white = ass_color("FFFFFF")
     accent = ass_color(pal["accent"])
     emph = ass_color(pal["emph"])
     shadow = ass_color("140810", "60")
+    caption_font, label_font, hook_font = (font, f"{font},44", font) if font else ("Archivo Black", "DM Serif Display,54", "Fredoka SemiBold")
+    slant = 0 if font else 1
     head = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {W}
@@ -245,11 +253,11 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Caption,Archivo Black,80,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,7,5,5,90,90,0,1
-Style: Label,DM Serif Display,54,{white},{white},{ass_color('3b2340')},{shadow},0,1,0,0,100,100,1,0,1,4,3,8,80,80,300,1
+Style: Caption,{caption_font},80,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,7,5,5,90,90,0,1
+Style: Label,{label_font},{white},{white},{ass_color('3b2340')},{shadow},0,{slant},0,0,100,100,1,0,1,4,3,8,80,80,300,1
 Style: Headline,DM Serif Display,150,{emph},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,7,6,5,90,90,0,1
 Style: Title,DM Serif Display,104,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,6,6,5,90,90,0,1
-Style: Hook,Fredoka SemiBold,76,{ass_color('3b2340')},{ass_color('3b2340')},{white},{ass_color('000000', 'FF')},0,0,0,0,100,100,0,0,1,0,0,5,90,90,0,1
+Style: Hook,{hook_font},76,{ass_color('3b2340')},{ass_color('3b2340')},{white},{ass_color('000000', 'FF')},0,0,0,0,100,100,0,0,1,0,0,5,90,90,0,1
 Style: Who,Fredoka SemiBold,68,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,5,2,5,0,0,0,1
 Style: Name,Fredoka SemiBold,76,{white},{white},{ass_color('3b2340')},{shadow},0,0,0,0,100,100,0,0,1,6,3,5,0,0,0,1
 Style: Source,DM Serif Display,34,{white},{white},{ass_color('3b2340')},{shadow},0,1,0,0,100,100,0,0,1,4,2,8,90,90,370,1
@@ -265,7 +273,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         style = "Title" if it["title"] else "Headline"
         ev.append(f"Dialogue: 2,{ts(it['start'])},{ts(it['end'])},{style},,0,0,0,,{{\\pos({W // 2},{HEADLINE_Y})\\q2{anim}}}{wrap(esc(it['text']), 14 if it['title'] else 12)}")
     last = tokens[-1]["line"]
-    if cast and hook_end:  # introduce the two by name while the hook is up
+    if cast and hook_end and not own_cast:  # introduce the two by name while the hook is up
         for name, x, col in NAME_TAGS:
             ev.append(f"Dialogue: 1,{ts(0)},{ts(hook_end)},Name,,0,0,0,,{{\\pos({x},{NAME_Y})\\fad(0,200)\\c{ass_color(col)}}}{name}")
     if hook_end:
@@ -274,11 +282,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         ev.append(f"Dialogue: 2,{ts(0)},{ts(hook_end)},Hook,,0,0,0,,{{\\pos({W // 2},{HOOK_Y})\\q2\\fad(0,200)}}{hook_text(tokens)[0]}")
     if outro_start:
         ev.append(f"Dialogue: 2,{ts(outro_start)},{ts(duration)},Hook,,0,0,0,,{{\\pos({W // 2},{HOOK_Y})\\q2\\fad(200,0)}}{hook_text(tokens, last)[0]}")
-    for p in stat_pops(tokens, hook_end or 0, outro_start or duration):
+    # (a channel with its own cast shows what a line is about in a bubble over the speaker instead)
+    for p in [] if own_cast else stat_pops(tokens, hook_end or 0, outro_start or duration):
         grow = f"\\fs{230 if len(p['text']) <= 4 else 150}\\fad(0,180)\\fscx60\\fscy60\\t(0,140,\\fscx108\\fscy108)\\t(140,240,\\fscx100\\fscy100)"
         ev.append(f"Dialogue: 2,{ts(p['start'])},{ts(p['end'])},Headline,,0,0,0,,{{\\pos({W // 2},{STAT_Y}){grow}}}{esc(p['text'])}")
     tokens = [t for t in tokens if not (hook_end and t["line"] == 0) and not (outro_start and t["line"] == last)]
-    if cast:  # a small name above the captions for as long as each one talks
+    if cast and not own_cast:  # a small name above the captions for as long as each one talks
         starts = {}
         for t in tokens:
             starts.setdefault(t["line"], t["start"])
@@ -301,7 +310,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             for wj, u in enumerate(ch):
                 col = emph if u["emph"] else white
                 if wj == wi:
-                    col = emph if u["emph"] else ass_color(SPEAKER_COLOR[u["who"]]) if u.get("who") in SPEAKER_COLOR else accent
+                    col = emph if u["emph"] else ass_color(speaker_colors[u["who"]]) if u.get("who") in speaker_colors else accent
                     parts.append(f"{{\\c{col}\\fscx108\\fscy108}}{esc(u['text'])}{{\\fscx100\\fscy100}}")
                 else:
                     parts.append(f"{{\\c{col}}}{esc(u['text'])}")

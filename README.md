@@ -70,6 +70,23 @@ python -m shorts.daily --script build/test-script.json     # render a ready-made
 GEMINI_API_KEY=... python -m shorts.daily                  # full run with the AI writer
 ```
 
+## The story channel (pilot)
+
+`tales/` is a second channel in the making, for viewers in their twenties: one-minute betrayal and revenge
+stories ("I read his texts as my wedding vows") that end on a question for the comments. A troupe of six adults
+(Mara, Dex, Lulu, Theo, Ivy, Gus) plays a different part in each story. It shares the voice, caption and render
+code with the blobs but has its own look: web-comic people with adult proportions (`tales/cast.py`), flat places
+under a cool film grade (`tales/sets.py`) and its own typeface (Poppins). Each story is a little film: a line can
+cut to another place, to a memory with a time stamp, to a close-up, or hold up a phone with the messages somebody
+was not meant to see; `tales/stage.py` lists what a line may say. The three pilot stories are hand-written in
+`tales/stories.json`; there is no daily job for it yet.
+
+```sh
+python make_tales.py sheet            # the cast, to out/preview/tales/cast.png
+python make_tales.py --quick          # all pilot stories with the quick Kokoro voices
+python make_tales.py vows             # one story with the Chatterbox voices
+```
+
 ## Adding facts
 
 The bank holds ~3 months of videos (each fact returns in a new format after 20 days). To grow it,
