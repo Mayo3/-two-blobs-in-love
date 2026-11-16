@@ -20,10 +20,19 @@ def main():
     actions = [{"action": "view", "label": "Download video", "url": video_url}]
     if run_url:
         actions.append({"action": "view", "label": "Details", "url": run_url})
+    # what shorts.crosspost already put up on the other platforms
+    posted = meta.get("posted", {})
+    elsewhere = " · ".join(f"{name} ✓" if res.get("id") else f"{name} ✗ ({res.get('error', '')[:80]})"
+                           for name, res in posted.items())
+    for name, res in posted.items():
+        if res.get("url") and len(actions) < 3:  # ntfy shows at most three buttons
+            actions.append({"action": "view", "label": f"Open on {name}", "url": res["url"]})
     r = requests.post("https://ntfy.sh/", json={
         "topic": topic,
         "title": f"🎬 New TikTok ready: {meta['title']}",
-        "message": f"{meta['caption']}\n\nPin as first comment:\n{meta['comment']}\n\n({meta['duration']}s · voice: {meta['voice']} · long-press to copy)",
+        "message": f"{meta['caption']}\n\nPin as first comment:\n{meta['comment']}\n\n"
+                   + (f"Already posted: {elsewhere}\n\n" if elsewhere else "")
+                   + f"({meta['duration']}s · voice: {meta['voice']} · long-press to copy)",
         "tags": ["two_hearts"],
         "click": video_url,
         "actions": actions,

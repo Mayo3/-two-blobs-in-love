@@ -133,6 +133,21 @@ jobs:
           gh release create "$tag" "$VIDEO" --title "Video $DAY" --notes-file notes.txt
           echo "url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/$tag/$(basename "$VIDEO")" >> "$GITHUB_OUTPUT"
 
+      # YouTube Shorts, Instagram Reels, Facebook Reels: each runs only once its secrets are set, and a
+      # failure there is reported in the phone notification instead of failing the run.
+      - name: Post to other platforms
+        if: steps.done.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          META: ${{ steps.make.outputs.meta }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+        run: python -m shorts.crosspost "$META"
+
       - name: Save history
         if: steps.done.outputs.skip != 'true'
         env:

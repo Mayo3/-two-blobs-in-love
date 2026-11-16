@@ -27,6 +27,36 @@ machines; if it can't run, two Kokoro voices speak instead and the phone notific
    as repository secret `GEMINI_API_KEY`.
 4. **Run it once by hand:** *Actions → daily-video → Run workflow*. After ~5 minutes your phone should buzz.
 
+## Posting to YouTube, Instagram and Facebook too (optional)
+
+After the release, the job also posts the video as a YouTube Short, an Instagram Reel and a Facebook Reel
+(`shorts/crosspost.py`), with the same caption plus the source line. Each platform runs only once its secrets are
+set, so switch them on one at a time; a failure is shown in the phone notification and never stops the run.
+TikTok stays manual: its API only posts private videos until the app passes TikTok's audit.
+
+**YouTube** (about 10 minutes, once):
+1. https://console.cloud.google.com → new project → *APIs & Services → Library* → enable **YouTube Data API v3**.
+2. *OAuth consent screen*: External, add yourself as a test user, then **Publish app** (in "Testing" mode the
+   login expires after 7 days). Google shows an "unverified app" warning on login; that's fine for your own channel.
+3. *Credentials → Create credentials → OAuth client ID → Desktop app*.
+4. Locally: `python -m shorts.crosspost login-youtube`, paste the client ID and secret, log in with the channel's
+   account. Add the three printed values as secrets `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, `YT_REFRESH_TOKEN`.
+5. Check the first upload: if YouTube marks it private, the Google project needs YouTube's API audit
+   (form at https://support.google.com/youtube/contact/yt_api_form); the notification says so.
+
+**Instagram + Facebook** (one Meta setup covers both):
+1. A Facebook Page for the channel, and an Instagram account switched to *Professional* and linked to that Page.
+2. https://developers.facebook.com → *Create app* (type Business). Your own accounts work without app review
+   while you are the app's admin.
+3. *Tools → Graph API Explorer*: pick the app, add permissions `pages_show_list`, `pages_read_engagement`,
+   `pages_manage_posts`, `instagram_basic`, `instagram_content_publish`, `business_management`, and *Generate token*.
+4. Locally: `python -m shorts.crosspost login-meta`, paste the app ID, app secret and that token, pick the Page.
+   Add the printed `META_PAGE_ID`, `META_PAGE_TOKEN` (it does not expire) and `IG_USER_ID` as secrets.
+
+Test on an existing video without waiting for the morning:
+`python -m shorts.crosspost out/<date>/meta.json --only youtube --youtube-privacy unlisted`
+(it skips platforms where that video is already posted, so a rerun never double-posts).
+
 ## Running locally
 
 ```sh
