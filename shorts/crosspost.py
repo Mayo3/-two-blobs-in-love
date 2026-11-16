@@ -37,6 +37,11 @@ def describe(meta):
     return f"{meta['caption']}\n\n{meta['comment']}"
 
 
+def clip(meta):
+    """The file to upload: the copy with background music when there is one (TikTok keeps the plain video)."""
+    return meta.get("video_music") or meta["video"]
+
+
 def need(*names):
     missing = [n for n in names if not os.environ.get(n)]
     return None if not missing else f"no secret {', '.join(missing)}"
@@ -64,13 +69,13 @@ def youtube(meta, privacy="public"):
                     "tags": [t.lstrip("#") for t in meta["caption"].split() if t.startswith("#")]},
         "status": {"privacyStatus": privacy, "selfDeclaredMadeForKids": False},
     }
-    size = os.path.getsize(meta["video"])
+    size = os.path.getsize(clip(meta))
     r = requests.post("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
                       headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=UTF-8",
                                "X-Upload-Content-Type": "video/mp4", "X-Upload-Content-Length": str(size)},
                       json=body, timeout=TIMEOUT)
     check(r)
-    with open(meta["video"], "rb") as f:
+    with open(clip(meta), "rb") as f:
         video = check(requests.put(r.headers["Location"], data=f, timeout=600,
                                    headers={"Authorization": f"Bearer {token}", "Content-Type": "video/mp4"}))
     status = video.get("status", {}).get("privacyStatus")
@@ -134,7 +139,7 @@ def instagram(meta):
     box = check(requests.post(f"{api}/{user}/media", timeout=TIMEOUT, data={
         "media_type": "REELS", "upload_type": "resumable", "caption": describe(meta)[:2200],
         "share_to_feed": "true", "access_token": token}))
-    _rupload(f"https://rupload.facebook.com/ig-api-upload/{GRAPH}/{box['id']}", token, meta["video"])
+    _rupload(f"https://rupload.facebook.com/ig-api-upload/{GRAPH}/{box['id']}", token, clip(meta))
     for _ in range(60):  # Instagram processes the video before it can be published
         st = check(requests.get(f"{api}/{box['id']}", timeout=TIMEOUT,
                                 params={"fields": "status_code,status", "access_token": token}))
@@ -156,7 +161,7 @@ def facebook(meta):
     token, page = os.environ["META_PAGE_TOKEN"], os.environ["META_PAGE_ID"]
     api = f"https://graph.facebook.com/{GRAPH}/{page}/video_reels"
     start = check(requests.post(api, timeout=TIMEOUT, data={"upload_phase": "start", "access_token": token}))
-    _rupload(start["upload_url"], token, meta["video"])
+    _rupload(start["upload_url"], token, clip(meta))
     check(requests.post(api, timeout=TIMEOUT, data={
         "upload_phase": "finish", "video_id": start["video_id"], "video_state": "PUBLISHED",
         "description": describe(meta), "access_token": token}))

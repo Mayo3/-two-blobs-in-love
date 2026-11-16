@@ -129,17 +129,28 @@ def main():
     duration = produce(script, os.path.join(ROOT, "build", name), video, voice)
     from . import tts
     voice = tts.LAST_VOICE or voice  # the backup voice, if the main one could not be used
+    # a copy with soft background music for the platforms it is posted to automatically; TikTok keeps the
+    # plain one so a trending sound can be added there
+    from .music import add_music, pick
+    track = pick(len(history))
+    video_music = None
+    if track:
+        try:
+            video_music = add_music(video, track, video[:-4] + "-music.mp4", seed=name)
+        except Exception as e:  # never lose the day's video over the music
+            print(f"music could not be added ({e}); the other platforms get the plain video")
 
     meta = {
         "date": today.isoformat(), "fact": fact["id"], "format": script["format"], "scene": script["scene"], "voice": voice,
         "title": script["title"], "caption": tiktok_caption(script, fact), "comment": source_comment(fact), "source": fact["source"],
         "video": video, "duration": round(duration, 1), "script": script,
+        "video_music": video_music, "music": os.path.basename(track) if video_music else None,
     }
     meta_path = os.path.join(out_dir, "meta.json")
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
     # hook, question and length are kept so TikTok's numbers can later be set against what each video opened with
-    history.append({**{k: meta[k] for k in ("date", "fact", "format", "scene", "voice", "title", "duration")},
+    history.append({**{k: meta[k] for k in ("date", "fact", "format", "scene", "voice", "title", "duration", "music")},
                     "hook": script["lines"][0].replace("*", ""), "question": script["lines"][-1].replace("*", "")})
     save_history(history)
     print(f"{video}  ({duration:.1f}s)\n{meta['caption']}\n{meta['comment']}")
