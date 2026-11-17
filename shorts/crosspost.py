@@ -28,7 +28,11 @@ from .daily import load_history, save_history
 from .produce import ROOT
 
 PAUSED = os.path.join(ROOT, "state", "crosspost-paused")  # while this file exists, nothing is posted
-GRAPH ="v24.0"  # Meta Graph API version; Meta retires each about two years after release
+GRAPH ="v24.0"
+# What the Meta user token needs: Facebook Reels on the Page need pages_manage_posts (Instagram works without it,
+# so a token lacking it fails only on Facebook with error #200).
+META_SCOPES = ("pages_show_list", "pages_read_engagement", "pages_manage_posts",
+               "instagram_basic", "instagram_content_publish", "business_management")  # Meta Graph API version; Meta retires each about two years after release
 TIMEOUT = 120
 
 
@@ -160,7 +164,11 @@ def instagram(meta):
 def facebook(meta):
     token, page = os.environ["META_PAGE_TOKEN"], os.environ["META_PAGE_ID"]
     api = f"https://graph.facebook.com/{GRAPH}/{page}/video_reels"
-    start = check(requests.post(api, timeout=TIMEOUT, data={"upload_phase": "start", "access_token": token}))
+    r = requests.post(api, timeout=TIMEOUT, data={"upload_phase": "start", "access_token": token})
+    if r.status_code == 403 and '"code":200' in r.text.replace(" ", ""):
+        raise RuntimeError("HTTP 403 (#200): the Page token lacks pages_manage_posts. Make a new token with "
+                           "python -m shorts.crosspost login-meta and update META_PAGE_TOKEN. " + r.text[:200])
+    start = check(r)
     _rupload(start["upload_url"], token, clip(meta))
     check(requests.post(api, timeout=TIMEOUT, data={
         "upload_phase": "finish", "video_id": start["video_id"], "video_state": "PUBLISHED",
@@ -171,6 +179,8 @@ def facebook(meta):
 def login_meta():
     """Turns a short-lived user token (from the Graph API Explorer) into a Page token that does not expire."""
     api = f"https://graph.facebook.com/{GRAPH}"
+    print("In the Graph API Explorer, pick your app, 'Get User Access Token' and tick ALL of:\n  "
+          + ", ".join(META_SCOPES) + "\n")
     token = input("User token (from the Graph API Explorer, or already extended in the Access Token Debugger): ").strip()
     app_id = input("Meta app ID (press Enter if the token is already extended): ").strip()
     if app_id:
@@ -184,6 +194,12 @@ def login_meta():
     if expires and expires - time.time() < 7 * 86400:
         raise SystemExit("That token is short-lived, so the Page token would expire too. Extend it first "
                          "(Access Token Debugger -> Extend Access Token) or give the app ID and secret.")
+    granted = set(check(requests.get(f"{api}/debug_token", timeout=TIMEOUT, params={
+        "input_token": long_user, "access_token": long_user})).get("data", {}).get("scopes", []))
+    missing = [x for x in META_SCOPES if x not in granted]
+    if missing:
+        raise SystemExit("The token is missing these permissions: " + ", ".join(missing)
+                         + "\nGenerate a new token in the Graph API Explorer with all of them ticked.")
     pages = check(requests.get(f"{api}/me/accounts", timeout=TIMEOUT, params={
         "fields": "id,name,access_token,instagram_business_account", "access_token": long_user}))["data"]
     if not pages:
