@@ -166,8 +166,8 @@ def facebook(meta):
     api = f"https://graph.facebook.com/{GRAPH}/{page}/video_reels"
     r = requests.post(api, timeout=TIMEOUT, data={"upload_phase": "start", "access_token": token})
     if r.status_code == 403 and '"code":200' in r.text.replace(" ", ""):
-        raise RuntimeError("HTTP 403 (#200): the Page token lacks pages_manage_posts. Make a new token with "
-                           "python -m shorts.crosspost login-meta and update META_PAGE_TOKEN. " + r.text[:200])
+        raise RuntimeError("HTTP 403 (#200): Facebook refused the video post. Run python -m shorts.crosspost "
+                           "check-meta with META_PAGE_TOKEN and META_PAGE_ID set to see why. " + r.text[:200])
     start = check(r)
     _rupload(start["upload_url"], token, clip(meta))
     check(requests.post(api, timeout=TIMEOUT, data={
@@ -176,12 +176,69 @@ def facebook(meta):
     return {"id": start["video_id"], "url": f"https://www.facebook.com/reel/{start['video_id']}"}
 
 
+def _clipboard():
+    """The clipboard's text (Windows PowerShell, macOS pbpaste, or Linux xclip); empty if none is available."""
+    import subprocess
+    for cmd in (["powershell", "-NoProfile", "-Command", "Get-Clipboard"], ["pbpaste"], ["xclip", "-o", "-selection", "clipboard"]):
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=10).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return ""
+
+
+def check_meta():
+    """Explains why Facebook refuses to post (error #200), using META_PAGE_TOKEN and META_PAGE_ID. Never prints the token."""
+    token, page = os.environ.get("META_PAGE_TOKEN", "").strip(), os.environ.get("META_PAGE_ID", "").strip()
+    if not token or not page:
+        raise SystemExit("Set META_PAGE_TOKEN and META_PAGE_ID (the same values as the repository secrets) first.")
+    api = f"https://graph.facebook.com/{GRAPH}"
+    d = requests.get(f"{api}/debug_token", timeout=TIMEOUT,
+                     params={"input_token": token, "access_token": token}).json().get("data", {})
+    print(f"token type: {d.get('type')}  valid: {d.get('is_valid')}  app: {d.get('application')}")
+    exp = d.get("expires_at", 0)
+    print("expires: never" if not exp else f"expires: {time.strftime('%Y-%m-%d', time.gmtime(exp))}")
+    if d.get("error"):
+        print("token error:", d["error"].get("message"))
+    scopes = set(d.get("scopes", []))
+    print("scopes:", ", ".join(sorted(scopes)) or "(none)")
+    problems = []
+    if d.get("type") != "PAGE":
+        problems.append("This is not a Page token. login-meta prints the Page token to use as META_PAGE_TOKEN.")
+    for need in ("pages_manage_posts", "pages_read_engagement", "pages_show_list"):
+        if need not in scopes:
+            problems.append(f"Missing permission {need}: make a new token with login-meta, ticking it.")
+    if d.get("profile_id") and str(d["profile_id"]) != page:
+        problems.append(f"The token belongs to Page {d['profile_id']}, but META_PAGE_ID is {page}: they must match.")
+    for g in d.get("granular_scopes", []):
+        if g.get("scope") == "pages_manage_posts" and g.get("target_ids") and page not in g["target_ids"]:
+            problems.append("pages_manage_posts was granted for other Pages only: when logging in, tick this Page too.")
+    me = requests.get(f"{api}/me", timeout=TIMEOUT, params={"fields": "id,name", "access_token": token}).json()
+    print("token speaks as:", me.get("name"), me.get("id"), "| META_PAGE_ID:", page)
+    if me.get("id") and me["id"] != page:
+        problems.append("The token speaks as a different Page than META_PAGE_ID.")
+    # a harmless read of the Page's videos tells whether the token can see the Page's video edge at all
+    v = requests.get(f"{api}/{page}/video_reels", timeout=TIMEOUT, params={"limit": 1, "access_token": token})
+    print("read Page reels:", v.status_code, "" if v.ok else v.json().get("error", {}).get("message", ""))
+    if problems:
+        print("\nPROBLEMS:\n- " + "\n- ".join(problems))
+    else:
+        print("\nThe token looks right for this Page. Then #200 usually means the Facebook account itself may not post "
+              "videos to the Page: check in Meta Business Suite that your account has full control (or the 'Create "
+              "content' task) on the Page, and that Facebook shows no restriction on the account or the Page.")
+
+
 def login_meta():
     """Turns a short-lived user token (from the Graph API Explorer) into a Page token that does not expire."""
     api = f"https://graph.facebook.com/{GRAPH}"
     print("In the Graph API Explorer, pick your app, 'Get User Access Token' and tick ALL of:\n  "
           + ", ".join(META_SCOPES) + "\n")
-    token = input("User token (from the Graph API Explorer, or already extended in the Access Token Debugger): ").strip()
+    token = input("User token (press Enter to take it from the clipboard, after 'copy' in the Graph API Explorer): ").strip()
+    if not token:
+        token = _clipboard()
+        if not token.startswith("EA"):
+            raise SystemExit("The clipboard does not hold a Meta token: click the copy button next to the token first.")
+        print("Token taken from the clipboard.")
     app_id = input("Meta app ID (press Enter if the token is already extended): ").strip()
     if app_id:
         app_secret = input("Meta app secret: ").strip()
@@ -228,6 +285,8 @@ def main(argv):
         return login_youtube()
     if argv[:1] == ["login-meta"]:
         return login_meta()
+    if argv[:1] == ["check-meta"]:
+        return check_meta()
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("meta")
