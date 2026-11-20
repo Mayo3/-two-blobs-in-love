@@ -140,10 +140,18 @@ def _rupload(url, token, path):
 def instagram(meta):
     token, user = os.environ["META_PAGE_TOKEN"], os.environ["IG_USER_ID"]
     api = f"https://graph.facebook.com/{GRAPH}"
-    box = check(requests.post(f"{api}/{user}/media", timeout=TIMEOUT, data={
-        "media_type": "REELS", "upload_type": "resumable", "caption": describe(meta)[:2200],
-        "share_to_feed": "true", "access_token": token}))
-    _rupload(f"https://rupload.facebook.com/ig-api-upload/{GRAPH}/{box['id']}", token, clip(meta))
+    fields = {"media_type": "REELS", "caption": describe(meta)[:2200], "share_to_feed": "true", "access_token": token}
+    try:
+        box = check(requests.post(f"{api}/{user}/media", timeout=TIMEOUT, data={**fields, "upload_type": "resumable"}))
+        _rupload(f"https://rupload.facebook.com/ig-api-upload/{GRAPH}/{box['id']}", token, clip(meta))
+    except RuntimeError as e:
+        # rupload sometimes answers 500 ProcessingFailedError "unknown error" for good files; Instagram can
+        # instead fetch the video itself from its public release URL (CLIP_URL, set by the workflow)
+        url = os.environ.get("CLIP_URL", "").strip()
+        if not url or "ProcessingFailedError" not in str(e):
+            raise
+        print(f"instagram: direct upload refused ({str(e)[:120]}); letting Instagram fetch {url}")
+        box = check(requests.post(f"{api}/{user}/media", timeout=TIMEOUT, data={**fields, "video_url": url}))
     for _ in range(60):  # Instagram processes the video before it can be published
         st = check(requests.get(f"{api}/{box['id']}", timeout=TIMEOUT,
                                 params={"fields": "status_code,status", "access_token": token}))

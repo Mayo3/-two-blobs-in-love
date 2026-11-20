@@ -130,8 +130,13 @@ jobs:
         run: |
           tag="video-$DAY-r$GITHUB_RUN_NUMBER"
           python -c "import json,os; print(json.load(open(os.environ['META']))['caption'])" > notes.txt
-          gh release create "$tag" "$VIDEO" --title "Video $DAY" --notes-file notes.txt
-          echo "url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/$tag/$(basename "$VIDEO")" >> "$GITHUB_OUTPUT"
+          # the copy with music is attached too, so Instagram can fetch it by URL if its direct upload fails
+          MUSIC=$(python -c "import json,os; print(json.load(open(os.environ['META'])).get('video_music') or '')")
+          files=("$VIDEO"); if [ -n "$MUSIC" ]; then files+=("$MUSIC"); fi
+          gh release create "$tag" "${files[@]}" --title "Video $DAY" --notes-file notes.txt
+          base="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/$tag"
+          echo "url=$base/$(basename "$VIDEO")" >> "$GITHUB_OUTPUT"
+          echo "clip_url=$base/$(basename "${MUSIC:-$VIDEO}")" >> "$GITHUB_OUTPUT"
 
       # YouTube Shorts, Instagram Reels, Facebook Reels: each runs only once its secrets are set, and a
       # failure there is reported in the phone notification instead of failing the run.
@@ -140,6 +145,7 @@ jobs:
         continue-on-error: true
         env:
           META: ${{ steps.make.outputs.meta }}
+          CLIP_URL: ${{ steps.release.outputs.clip_url }}
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
