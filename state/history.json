@@ -250,5 +250,22 @@
       "instagram": "failed",
       "facebook": "1167061275780232"
     }
+  },
+  {
+    "date": "2026-11-20",
+    "fact": "friends-first",
+    "format": "try-this",
+    "scene": "kitchen",
+    "voice": "cast",
+    "title": "Did you date your best friend first?",
+    "duration": 21.6,
+    "music": "01-rhodes.mp3",
+    "hook": "Did you plan to date your best friend?",
+    "question": "Were you friends first?",
+    "posted": {
+      "youtube": "vuycA0ynya0",
+      "instagram": "failed",
+      "facebook": "failed"
+    }
   }
 ]
