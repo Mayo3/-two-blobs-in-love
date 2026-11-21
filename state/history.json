@@ -267,5 +267,22 @@
       "instagram": "failed",
       "facebook": "failed"
     }
+  },
+  {
+    "date": "2026-11-21",
+    "fact": "shared-dislike",
+    "format": "quiz",
+    "scene": "lab",
+    "voice": "cast",
+    "title": "What builds a faster bond between strangers",
+    "duration": 25.1,
+    "music": "01-rhodes.mp3",
+    "hook": "Does sharing a hated person bring strangers closer?",
+    "question": "Do you bond faster over loves or hates?",
+    "posted": {
+      "youtube": "2rpH93mpSAY",
+      "instagram": "failed",
+      "facebook": "failed"
+    }
   }
 ]
