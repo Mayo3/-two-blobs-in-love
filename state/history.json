@@ -284,5 +284,22 @@
       "instagram": "failed",
       "facebook": "failed"
     }
+  },
+  {
+    "date": "2026-11-22",
+    "fact": "similarity",
+    "format": "myth-vs-fact",
+    "scene": "cafe",
+    "voice": "cast",
+    "title": "Do opposites really attract?",
+    "duration": 26.0,
+    "music": "01-rhodes.mp3",
+    "hook": "Do opposites really attract?",
+    "question": "Do you two act alike?",
+    "posted": {
+      "youtube": "3ulrvgua6Ns",
+      "instagram": "failed",
+      "facebook": "failed"
+    }
   }
 ]
