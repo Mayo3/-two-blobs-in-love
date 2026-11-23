@@ -24,8 +24,8 @@ import time
 
 import requests
 
-from .daily import load_history, save_history
-from .produce import ROOT
+# the video pipeline is imported only when posting, so check-meta needs nothing but requests
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 PAUSED = os.path.join(ROOT, "state", "crosspost-paused")  # while this file exists, nothing is posted
 GRAPH ="v24.0"
@@ -228,6 +228,15 @@ def check_meta():
     # a harmless read of the Page's videos tells whether the token can see the Page's video edge at all
     v = requests.get(f"{api}/{page}/video_reels", timeout=TIMEOUT, params={"limit": 1, "access_token": token})
     print("read Page reels:", v.status_code, "" if v.ok else v.json().get("error", {}).get("message", ""))
+    if not v.ok:
+        problems.append("The token cannot read the Page's reels: " + v.json().get("error", {}).get("message", ""))
+    ig = os.environ.get("IG_USER_ID", "").strip()
+    if ig:  # a harmless read of the Instagram account the Reels go to
+        r = requests.get(f"{api}/{ig}", timeout=TIMEOUT, params={"fields": "username", "access_token": token})
+        print("read Instagram account:", r.status_code,
+              r.json().get("username", "") if r.ok else r.json().get("error", {}).get("message", ""))
+        if not r.ok:
+            problems.append("The token cannot read the Instagram account IG_USER_ID.")
     if problems:
         print("\nPROBLEMS:\n- " + "\n- ".join(problems))
     else:
@@ -327,6 +336,7 @@ def main(argv):
     meta["posted"] = posted
     with open(args.meta, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
+    from .daily import load_history, save_history
     history = load_history()
     for h in reversed(history):
         if h["date"] == meta["date"] and h["fact"] == meta["fact"]:
