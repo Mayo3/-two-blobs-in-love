@@ -301,5 +301,22 @@
       "instagram": "failed",
       "facebook": "failed"
     }
+  },
+  {
+    "date": "2026-11-23",
+    "fact": "uncertain-interest",
+    "format": "reveal",
+    "scene": "night",
+    "voice": "cast",
+    "title": "Does playing hard to get work",
+    "duration": 19.5,
+    "music": "01-rhodes.mp3",
+    "hook": "Does playing hard to get actually work?",
+    "question": "Did you play hard to get?",
+    "posted": {
+      "youtube": "Ebvp69HA364",
+      "instagram": "18133079005697862",
+      "facebook": "1525911656260147"
+    }
   }
 ]
