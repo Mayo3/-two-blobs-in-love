@@ -352,5 +352,22 @@
       "instagram": "18080174462727985",
       "facebook": "1138523298764571"
     }
+  },
+  {
+    "date": "2026-11-26",
+    "fact": "heart-sync",
+    "format": "quiz",
+    "scene": "home",
+    "voice": "cast",
+    "title": "When heartbeats sync without touching",
+    "duration": 24.9,
+    "music": "01-rhodes.mp3",
+    "hook": "Can just sitting near each other sync your heart rates?",
+    "question": "Do you two sit in silence?",
+    "posted": {
+      "youtube": "aypzaFz4yUI",
+      "instagram": "17918085384503213",
+      "facebook": "2203296071066639"
+    }
   }
 ]
